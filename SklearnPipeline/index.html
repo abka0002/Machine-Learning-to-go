@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sklearn Pipeline – Interactive Guide</title>
+<style>
+:root{--green:#2e7d32;--green2:#66bb6a;--green3:#a5d6a7;--green4:#e8f5e9;--dark:#1b2e1b;--muted:#5f7d5f;--border:#c8e6c9;--bg:#f1f8e9;--white:#fff;--red:#c62828;--orange:#ef6c00;--blue:#1565c0;--purple:#6a1b9a}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:var(--dark);line-height:1.6}
+/* Layout */
+.app{display:flex;min-height:100vh}
+nav{width:240px;background:var(--green);color:var(--white);padding:20px 0;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0}
+nav h2{padding:0 18px 14px;font-size:1.05rem;border-bottom:1px solid rgba(255,255,255,.2);margin-bottom:10px;letter-spacing:.5px}
+nav a{display:block;padding:9px 18px;color:rgba(255,255,255,.8);text-decoration:none;font-size:.88rem;cursor:pointer;transition:all .2s}
+nav a:hover,nav a.active{background:rgba(255,255,255,.15);color:#fff}
+main{flex:1;max-width:960px;margin:0 auto;padding:30px 36px 60px}
+section{display:none;animation:fadeIn .3s}
+section.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+h1{font-size:1.7rem;color:var(--green);margin-bottom:6px}
+.subtitle{color:var(--muted);margin-bottom:24px;font-size:.95rem}
+h2{font-size:1.25rem;color:var(--green);margin:24px 0 10px}
+h3{font-size:1.05rem;color:var(--dark);margin:18px 0 8px}
+p{margin-bottom:12px}
+code{background:var(--green4);padding:2px 6px;border-radius:4px;font-size:.9em;font-family:'Cascadia Code','Fira Code',monospace}
+pre{background:#1e1e1e;color:#d4d4d4;padding:16px 20px;border-radius:10px;overflow-x:auto;margin:14px 0;font-size:.85rem;line-height:1.55;font-family:'Cascadia Code','Fira Code',monospace}
+pre .kw{color:#569cd6} pre .fn{color:#dcdcaa} pre .st{color:#ce9178} pre .cm{color:#6a9955} pre .num{color:#b5cea8} pre .op{color:#d4d4d4} pre .cls{color:#4ec9b0}
+.card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:16px 0;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.card h3{margin-top:0}
+.info-box{background:var(--green4);border-left:4px solid var(--green);padding:14px 18px;border-radius:0 8px 8px 0;margin:14px 0}
+.warn-box{background:#fff3e0;border-left:4px solid var(--orange);padding:14px 18px;border-radius:0 8px 8px 0;margin:14px 0}
+/* Pipeline visual */
+.pipe-visual{display:flex;align-items:center;gap:0;margin:20px 0;flex-wrap:wrap;justify-content:center}
+.pipe-step{background:var(--white);border:2px solid var(--green);border-radius:12px;padding:14px 18px;text-align:center;min-width:120px;position:relative;transition:all .3s;cursor:default}
+.pipe-step:hover{transform:translateY(-3px);box-shadow:0 6px 16px rgba(46,125,50,.15)}
+.pipe-step .step-icon{font-size:1.6rem;margin-bottom:4px}
+.pipe-step .step-name{font-weight:700;font-size:.85rem;color:var(--green)}
+.pipe-step .step-type{font-size:.75rem;color:var(--muted)}
+.pipe-step.final{border-color:var(--blue);} .pipe-step.final .step-name{color:var(--blue)}
+.pipe-arrow{font-size:1.4rem;color:var(--green2);padding:0 6px;flex-shrink:0}
+/* ColumnTransformer diagram */
+.ct-diagram{display:flex;flex-direction:column;align-items:center;margin:20px 0;background:var(--white);padding:30px 20px;border-radius:12px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.ct-box{padding:12px 20px;border-radius:8px;font-weight:700;text-align:center;z-index:2}
+.df-box{background:#e0f7fa;border:2px solid #0097a7;color:#006064}
+.concat-box{background:#eceff1;border:2px solid #607d8b;color:#37474f}
+.ct-line-down{width:2px;background:#b0bec5}
+.ct-split{display:flex;width:100%;max-width:600px;justify-content:space-around;gap:20px}
+.ct-branch{display:flex;flex-direction:column;align-items:center;gap:10px;flex:1}
+.ct-branch-label{text-align:center;font-weight:700;color:var(--muted);margin-bottom:5px;font-size:.9rem}
+.num-step{border-color:var(--orange);background:#fff3e0;width:100%;max-width:250px} .num-step .step-name{color:var(--orange)}
+.cat-step{border-color:var(--purple);background:#f3e5f5;width:100%;max-width:250px} .cat-step .step-name{color:var(--purple)}
+/* Flow diagram */
+.flow-diagram{margin:20px 0}
+.flow-diagram canvas{width:100%;border-radius:12px;background:var(--white);border:1px solid var(--border)}
+/* Reference image */
+.ref-image-container{text-align:center;margin:20px 0}
+.ref-image-container img{max-width:100%;height:auto;border-radius:12px;border:1px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.ref-image-caption{font-size:.82rem;color:var(--muted);margin-top:8px;font-style:italic}
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin:18px 0 0}
+.tab{padding:10px 20px;cursor:pointer;font-size:.88rem;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s}
+.tab:hover{color:var(--green)}
+.tab.active{color:var(--green);border-bottom-color:var(--green);font-weight:600}
+.tab-panel{display:none;padding:16px 0}
+.tab-panel.active{display:block}
+/* Buttons */
+.btn{display:inline-block;padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-size:.88rem;font-weight:600;transition:all .2s}
+.btn-green{background:var(--green);color:#fff} .btn-green:hover{background:#1b5e20}
+.btn-outline{background:transparent;border:2px solid var(--green);color:var(--green)} .btn-outline:hover{background:var(--green4)}
+.btn-red{background:var(--red);color:#fff;font-size:.8rem;padding:6px 12px} .btn-red:hover{background:#b71c1c}
+/* Quiz */
+.quiz-q{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px;margin:12px 0}
+.quiz-q p{font-weight:600;margin-bottom:10px}
+.quiz-opt{display:block;padding:8px 14px;margin:4px 0;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .2s;font-size:.88rem}
+.quiz-opt:hover{background:var(--green4)}
+.quiz-opt.correct{background:#c8e6c9;border-color:var(--green)}
+.quiz-opt.wrong{background:#ffcdd2;border-color:var(--red)}
+.quiz-feedback{margin-top:8px;font-size:.88rem;padding:8px 12px;border-radius:6px;display:none}
+/* Responsive */
+@media(max-width:800px){nav{width:180px} main{padding:20px 16px}}
+@media(max-width:600px){
+  .app{flex-direction:column} nav{width:100%;height:auto;position:relative;display:flex;flex-wrap:wrap;padding:10px} nav h2{display:none} nav a{padding:6px 12px;font-size:.8rem} main{padding:16px}
+  .ct-split{flex-direction:column;gap:30px;align-items:center}
+  .ct-branch{width:100%;max-width:300px}
+  .hide-mobile{display:none !important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<nav id="nav">
+  <h2>🔗 Sklearn Pipeline</h2>
+  <a onclick="showSec('intro')" class="active">1. What is a Pipeline?</a>
+  <a onclick="showSec('why')">2. Why Use Pipelines?</a>
+  <a onclick="showSec('anatomy')">3. Anatomy</a>
+  <a onclick="showSec('flow')">4. fit / transform / predict</a>
+  <a onclick="showSec('columntransformer')">5. ColumnTransformer</a>
+  <a onclick="showSec('code')">6. Code Examples</a>
+  <a onclick="showSec('advanced')">7. Advanced Topics</a>
+  <a onclick="showSec('quiz')">8. Quiz</a>
+</nav>
+<main>
+
+<!-- SECTION 1: Introduction -->
+<section id="intro" class="active">
+<h1>What is a Sklearn Pipeline?</h1>
+<p class="subtitle">Chaining preprocessing steps and a model into a single, reproducible workflow</p>
+
+<div class="card">
+<h3>The Problem</h3>
+<p>In a typical ML workflow, you need to apply multiple transformations before training a model:</p>
+<div class="pipe-visual">
+  <div class="pipe-step"><div class="step-icon">🧹</div><div class="step-name">Impute</div><div class="step-type">Missing values</div></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step"><div class="step-icon">📏</div><div class="step-name">Scale</div><div class="step-type">Standardize</div></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step"><div class="step-icon">🔢</div><div class="step-name">Encode</div><div class="step-type">Categorical</div></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step final"><div class="step-icon">🤖</div><div class="step-name">Model</div><div class="step-type">Estimator</div></div>
+</div>
+<p>Without a pipeline, you must manually call <code>fit_transform()</code> on each step, track fitted transformers, and reapply them identically at prediction time. This is <strong>error-prone</strong> and <strong>verbose</strong>.</p>
+</div>
+
+<div class="card">
+<h3>The Solution: <code>sklearn.pipeline.Pipeline</code></h3>
+<p>A Pipeline bundles a sequence of <strong>transforms</strong> and a final <strong>estimator</strong> into a single object that behaves like an estimator itself:</p>
+<pre><span class="kw">from</span> sklearn.pipeline <span class="kw">import</span> Pipeline
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> <span class="cls">StandardScaler</span>
+<span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> <span class="cls">Lasso</span>
+
+pipe = <span class="cls">Pipeline</span>([
+    (<span class="st">'scaler'</span>, <span class="cls">StandardScaler</span>()),
+    (<span class="st">'lasso'</span>,  <span class="cls">Lasso</span>())
+])
+
+pipe.<span class="fn">fit</span>(X_train, y_train)        <span class="cm"># fits scaler, then model</span>
+pipe.<span class="fn">predict</span>(X_test)              <span class="cm"># transforms, then predicts</span></pre>
+</div>
+
+<div class="info-box">
+<strong>Key Insight:</strong> A Pipeline ensures that the <em>exact same</em> transformations applied during training are automatically applied during prediction — preventing data leakage and inconsistencies.
+</div>
+</section>
+
+<!-- SECTION 2: Why -->
+<section id="why">
+<h1>Why Use Pipelines?</h1>
+<p class="subtitle">Five compelling reasons to adopt pipelines in every ML project</p>
+
+<div class="card">
+<h3>1. 🛡️ Prevent Data Leakage</h3>
+<p>Without a pipeline, it's easy to accidentally fit a scaler on the full dataset (including test data) before splitting. A pipeline guarantees transformers are fit <strong>only on training data</strong> during cross-validation.</p>
+</div>
+
+<div class="card">
+<h3>2. 🧼 Cleaner Code</h3>
+<p>Replace dozens of manual <code>fit_transform()</code> / <code>transform()</code> calls with a single <code>pipe.fit()</code> and <code>pipe.predict()</code>.</p>
+<pre><span class="cm"># Without pipeline (messy)</span>
+X_train_imp  = imputer.<span class="fn">fit_transform</span>(X_train)
+X_train_sc   = scaler.<span class="fn">fit_transform</span>(X_train_imp)
+model.<span class="fn">fit</span>(X_train_sc, y_train)
+X_test_imp   = imputer.<span class="fn">transform</span>(X_test)
+X_test_sc    = scaler.<span class="fn">transform</span>(X_test_imp)
+preds        = model.<span class="fn">predict</span>(X_test_sc)
+
+<span class="cm"># With pipeline (clean)</span>
+pipe.<span class="fn">fit</span>(X_train, y_train)
+preds = pipe.<span class="fn">predict</span>(X_test)</pre>
+</div>
+
+<div class="card">
+<h3>3. 🔄 Easy Cross-Validation</h3>
+<p>Pass the entire pipeline to <code>cross_val_score()</code> — each fold correctly fits transformers only on its training portion.</p>
+</div>
+
+<div class="card">
+<h3>4. 🎯 Grid Search over Everything</h3>
+<p>Tune hyperparameters of <em>any</em> step using <code>GridSearchCV</code> with the <code>stepname__param</code> syntax:</p>
+<pre>params = {<span class="st">'scaler__with_mean'</span>: [<span class="kw">True</span>, <span class="kw">False</span>],
+          <span class="st">'lasso__alpha'</span>:      [<span class="num">0.01</span>, <span class="num">0.1</span>, <span class="num">1.0</span>]}</pre>
+</div>
+
+<div class="card">
+<h3>5. 📦 Deployment-Ready</h3>
+<p>Serialize the entire pipeline with <code>joblib.dump(pipe, 'model.pkl')</code> — one file contains all preprocessing + model logic.</p>
+</div>
+</section>
+
+<!-- SECTION 3: Anatomy -->
+<section id="anatomy">
+<h1>Anatomy of a Pipeline</h1>
+<p class="subtitle">Understanding the building blocks</p>
+
+<div class="card">
+<h3>Two Types of Components</h3>
+<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px">
+<div style="flex:1;min-width:250px;background:var(--green4);border-radius:10px;padding:16px">
+  <h3 style="color:var(--green);margin-top:0">🔄 Transformer</h3>
+  <p>Has <code>fit()</code> + <code>transform()</code> methods.</p>
+  <p>All intermediate steps must be transformers.</p>
+  <p><em>Examples:</em> StandardScaler, OneHotEncoder, PCA, SimpleImputer</p>
+</div>
+<div style="flex:1;min-width:250px;background:#e3f2fd;border-radius:10px;padding:16px">
+  <h3 style="color:var(--blue);margin-top:0">🎯 Estimator</h3>
+  <p>Has <code>fit()</code> + <code>predict()</code> methods.</p>
+  <p>Only the <strong>last step</strong> can be an estimator (or another transformer).</p>
+  <p><em>Examples:</em> Lasso, RandomForestRegressor, SVC</p>
+</div>
+</div>
+</div>
+
+<div class="card">
+<h3>The <code>steps</code> Parameter</h3>
+<p>A pipeline is defined by a list of <code>(name, estimator)</code> tuples:</p>
+<pre>pipe = <span class="cls">Pipeline</span>(steps=[
+    (<span class="st">'imputer'</span>,  <span class="cls">SimpleImputer</span>(strategy=<span class="st">'median'</span>)),  <span class="cm"># step 0: transformer</span>
+    (<span class="st">'scaler'</span>,   <span class="cls">StandardScaler</span>()),                  <span class="cm"># step 1: transformer</span>
+    (<span class="st">'pca'</span>,      <span class="cls">PCA</span>(n_components=<span class="num">5</span>)),                 <span class="cm"># step 2: transformer</span>
+    (<span class="st">'lasso'</span>,    <span class="cls">Lasso</span>())                              <span class="cm"># step 3: final estimator</span>
+])</pre>
+<p>Or use the shorthand <code>make_pipeline()</code> which auto-generates names:</p>
+<pre><span class="kw">from</span> sklearn.pipeline <span class="kw">import</span> make_pipeline
+
+pipe = <span class="fn">make_pipeline</span>(
+    <span class="cls">SimpleImputer</span>(strategy=<span class="st">'median'</span>),
+    <span class="cls">StandardScaler</span>(),
+    <span class="cls">PCA</span>(n_components=<span class="num">5</span>),
+    <span class="cls">Lasso</span>()
+)</pre>
+</div>
+
+<div class="card">
+<h3>Accessing Steps</h3>
+<pre>pipe.steps            <span class="cm"># list of (name, estimator) tuples</span>
+pipe.named_steps      <span class="cm"># dict-like access</span>
+pipe[<span class="num">0</span>]               <span class="cm"># first step by index</span>
+pipe[<span class="st">'scaler'</span>]        <span class="cm"># step by name</span>
+pipe[:<span class="num">2</span>]              <span class="cm"># slicing → returns a sub-Pipeline</span></pre>
+</div>
+
+<div class="warn-box">
+<strong>Rule:</strong> All steps except the last <em>must</em> implement <code>transform()</code>. The last step can be any estimator (classifier, regressor) or a transformer.
+</div>
+</section>
+
+<!-- SECTION 4: Flow -->
+<section id="flow">
+<h1>How fit / transform / predict Work</h1>
+<p class="subtitle">Visualizing the data flow through the pipeline</p>
+
+<div class="card">
+<h3>Pipeline Flow — Reference Diagram</h3>
+<p>The following diagram shows the complete pipeline flow for both <strong>Step 1 (Training)</strong> and <strong>Step 2 (Prediction)</strong>:</p>
+<div class="ref-image-container">
+  <img src="Gemini_Generated_Image_wsui47wsui47wsui.png" alt="Sklearn Pipeline Flow Diagram — showing Step 1 (fit) with training set and class labels flowing through Scaling, Dimensionality Reduction, and Estimator steps using .fit() and .transform(), and Step 2 (predict) with test set flowing through the same steps using only .transform() and .predict() to produce class labels">
+  <div class="ref-image-caption">Pipeline data flow: Step 1 (fit) uses .fit() &amp; .transform() on the left; Step 2 (predict) uses .transform() &amp; .predict() on the right</div>
+</div>
+</div>
+
+<div class="tabs" id="flowTabs">
+  <div class="tab active" data-p="fitPanel">pipe.fit(X, y)</div>
+  <div class="tab" data-p="predPanel">pipe.predict(X)</div>
+  <div class="tab" data-p="fitsPanel">pipe.fit_predict(X, y)</div>
+</div>
+
+<div class="tab-panel active" id="fitPanel">
+<div class="flow-diagram"><canvas id="fitCanvas" width="900" height="320"></canvas></div>
+<div class="info-box">
+<strong>pipe.fit(X, y):</strong> For each intermediate step, call <code>fit_transform(X, y)</code> and pass the result to the next step. On the <strong>final step</strong>, call only <code>fit(X, y)</code>.
+</div>
+</div>
+
+<div class="tab-panel" id="predPanel">
+<div class="flow-diagram"><canvas id="predCanvas" width="900" height="320"></canvas></div>
+<div class="info-box">
+<strong>pipe.predict(X):</strong> For each intermediate step, call <code>transform(X)</code> (using parameters learned during fit). On the final step, call <code>predict(X)</code>.
+</div>
+</div>
+
+<div class="tab-panel" id="fitsPanel">
+<div class="card">
+<p><code>pipe.fit_predict(X, y)</code> is equivalent to <code>pipe.fit(X, y).predict(X)</code> but may be more efficient if the final estimator implements <code>fit_predict</code>.</p>
+<p>Similarly, <code>pipe.fit_transform(X, y)</code> calls <code>fit_transform</code> on all steps (requires last step to be a transformer).</p>
+</div>
+</div>
+</section>
+
+<!-- SECTION 5: ColumnTransformer -->
+<section id="columntransformer">
+<h1>ColumnTransformer Example</h1>
+<p class="subtitle">Handling heterogeneous data (numerical and categorical features) in a single pipeline</p>
+
+<div class="card">
+<h3>Why do we need ColumnTransformer?</h3>
+<p>Most real-world datasets contain a mix of feature types. For example, a dataset might have numerical columns (like <code>Age</code> and <code>Fare</code>) and categorical columns (like <code>Sex</code> and <code>Embarked</code>). You cannot apply a <code>StandardScaler</code> to categorical text, and you shouldn't apply <code>OneHotEncoder</code> to continuous numbers.</p>
+<p><code>ColumnTransformer</code> allows you to apply different preprocessing pipelines to different subsets of features, and then it automatically concatenates the results back into a single feature matrix.</p>
+</div>
+
+<div class="ct-diagram">
+  <div class="ct-box df-box">Input DataFrame (X)<br><small style="font-weight:normal">['Age', 'Fare', 'Sex', 'Embarked']</small></div>
+  
+  <div class="ct-line-down hide-mobile" style="height:20px"></div>
+  <div class="hide-mobile" style="width: 50%; max-width: 300px; border-top: 2px solid #b0bec5; display:flex; justify-content: space-between;">
+      <div class="ct-line-down" style="height:20px"></div>
+      <div class="ct-line-down" style="height:20px"></div>
+  </div>
+
+  <div class="ct-split">
+     <!-- Numerical Branch -->
+     <div class="ct-branch">
+        <div class="ct-branch-label">Numerical Pipeline<br><small>columns: ['Age', 'Fare']</small></div>
+        <div class="pipe-step num-step">
+          <div class="step-icon">🔢</div><div class="step-name">SimpleImputer</div><div class="step-type">strategy='median'</div>
+        </div>
+        <div class="pipe-arrow">↓</div>
+        <div class="pipe-step num-step">
+          <div class="step-icon">📏</div><div class="step-name">StandardScaler</div><div class="step-type">Scale to mean=0, std=1</div>
+        </div>
+     </div>
+     
+     <!-- Categorical Branch -->
+     <div class="ct-branch">
+        <div class="ct-branch-label">Categorical Pipeline<br><small>columns: ['Sex', 'Embarked']</small></div>
+        <div class="pipe-step cat-step">
+          <div class="step-icon">🏷️</div><div class="step-name">SimpleImputer</div><div class="step-type">strategy='most_frequent'</div>
+        </div>
+        <div class="pipe-arrow">↓</div>
+        <div class="pipe-step cat-step">
+          <div class="step-icon">🔠</div><div class="step-name">OneHotEncoder</div><div class="step-type">handle_unknown='ignore'</div>
+        </div>
+     </div>
+  </div>
+  
+  <div class="hide-mobile" style="width: 50%; max-width: 300px; border-bottom: 2px solid #b0bec5; display:flex; justify-content: space-between; margin-top: 10px;">
+      <div class="ct-line-down" style="height:20px"></div>
+      <div class="ct-line-down" style="height:20px"></div>
+  </div>
+  <div class="ct-line-down hide-mobile" style="height:20px"></div>
+  <div class="pipe-arrow" style="display:none;" id="ctMobileArrow">↓</div>
+  
+  <div class="ct-box concat-box">🔗 ColumnTransformer<br><small style="font-weight:normal">Concatenates transformed columns back together</small></div>
+  <div class="ct-line-down" style="height:20px"></div>
+  <div class="pipe-step final" style="width:100%; max-width:250px">
+    <div class="step-icon">🤖</div><div class="step-name">Lasso</div><div class="step-type">Final Estimator</div>
+  </div>
+</div>
+
+<div class="card">
+<h3>The Code</h3>
+<pre><span class="kw">from</span> sklearn.compose <span class="kw">import</span> <span class="cls">ColumnTransformer</span>
+<span class="kw">from</span> sklearn.pipeline <span class="kw">import</span> <span class="cls">Pipeline</span>
+<span class="kw">from</span> sklearn.impute <span class="kw">import</span> <span class="cls">SimpleImputer</span>
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> <span class="cls">StandardScaler</span>, <span class="cls">OneHotEncoder</span>
+<span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> <span class="cls">Lasso</span>
+
+<span class="cm"># 1. Define the sub-pipelines</span>
+num_pipe = <span class="cls">Pipeline</span>([
+    (<span class="st">'imputer'</span>, <span class="cls">SimpleImputer</span>(strategy=<span class="st">'median'</span>)),
+    (<span class="st">'scaler'</span>, <span class="cls">StandardScaler</span>())
+])
+
+cat_pipe = <span class="cls">Pipeline</span>([
+    (<span class="st">'imputer'</span>, <span class="cls">SimpleImputer</span>(strategy=<span class="st">'most_frequent'</span>)),
+    (<span class="st">'encoder'</span>, <span class="cls">OneHotEncoder</span>(handle_unknown=<span class="st">'ignore'</span>))
+])
+
+<span class="cm"># 2. Combine them using ColumnTransformer</span>
+preprocessor = <span class="cls">ColumnTransformer</span>(
+    transformers=[
+        (<span class="st">'num'</span>, num_pipe, [<span class="st">'Age'</span>, <span class="st">'Fare'</span>]),
+        (<span class="st">'cat'</span>, cat_pipe, [<span class="st">'Sex'</span>, <span class="st">'Embarked'</span>])
+    ])
+
+<span class="cm"># 3. Create the final pipeline</span>
+full_pipe = <span class="cls">Pipeline</span>([
+    (<span class="st">'preprocessor'</span>, preprocessor),
+    (<span class="st">'lasso'</span>, <span class="cls">Lasso</span>(alpha=<span class="num">0.1</span>))
+])
+
+<span class="cm"># 4. Fit and predict just like a normal pipeline!</span>
+full_pipe.<span class="fn">fit</span>(X_train, y_train)
+preds = full_pipe.<span class="fn">predict</span>(X_test)</pre>
+</div>
+</section>
+
+<!-- SECTION 6: Code Examples -->
+<section id="code">
+<h1>Code Examples</h1>
+<p class="subtitle">Common pipeline patterns you'll use in practice</p>
+
+<div class="tabs" id="codeTabs">
+  <div class="tab active" data-p="codeBasic">Basic</div>
+  <div class="tab" data-p="codeCV">Cross-Val</div>
+  <div class="tab" data-p="codeGrid">Grid Search</div>
+</div>
+
+<div class="tab-panel active" id="codeBasic">
+<pre><span class="kw">from</span> sklearn.pipeline <span class="kw">import</span> Pipeline
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> <span class="cls">StandardScaler</span>
+<span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> <span class="cls">Lasso</span>
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split
+
+X_train, X_test, y_train, y_test = <span class="fn">train_test_split</span>(X, y, test_size=<span class="num">0.3</span>)
+
+pipe = <span class="cls">Pipeline</span>([
+    (<span class="st">'scaler'</span>, <span class="cls">StandardScaler</span>()),
+    (<span class="st">'lasso'</span>,  <span class="cls">Lasso</span>(alpha=<span class="num">0.1</span>))
+])
+
+pipe.<span class="fn">fit</span>(X_train, y_train)
+score = pipe.<span class="fn">score</span>(X_test, y_test)
+<span class="fn">print</span>(<span class="st">f"R^2 Score: </span>{score:<span class="st">.3f}</span><span class="st">"</span>)</pre>
+</div>
+
+<div class="tab-panel" id="codeCV">
+<pre><span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> cross_val_score
+
+pipe = <span class="cls">Pipeline</span>([
+    (<span class="st">'scaler'</span>, <span class="cls">StandardScaler</span>()),
+    (<span class="st">'lasso'</span>,  <span class="cls">Lasso</span>())
+])
+
+<span class="cm"># Each fold: fit scaler on train fold, transform train+val, fit model</span>
+scores = <span class="fn">cross_val_score</span>(pipe, X, y, cv=<span class="num">5</span>, scoring=<span class="st">'r2'</span>)
+<span class="fn">print</span>(<span class="st">f"Mean R^2: </span>{scores.<span class="fn">mean</span>():<span class="st">.3f}</span><span class="st"> ± </span>{scores.<span class="fn">std</span>():<span class="st">.3f}</span><span class="st">"</span>)</pre>
+</div>
+
+<div class="tab-panel" id="codeGrid">
+<pre><span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> <span class="cls">GridSearchCV</span>
+
+pipe = <span class="cls">Pipeline</span>([
+    (<span class="st">'scaler'</span>, <span class="cls">StandardScaler</span>()),
+    (<span class="st">'lasso'</span>,  <span class="cls">Lasso</span>())
+])
+
+<span class="cm"># Use stepname__param syntax</span>
+param_grid = {
+    <span class="st">'scaler__with_mean'</span>: [<span class="kw">True</span>, <span class="kw">False</span>],
+    <span class="st">'lasso__alpha'</span>:      [<span class="num">0.001</span>, <span class="num">0.01</span>, <span class="num">0.1</span>, <span class="num">1.0</span>, <span class="num">10.0</span>]
+}
+
+grid = <span class="cls">GridSearchCV</span>(pipe, param_grid, cv=<span class="num">5</span>, scoring=<span class="st">'r2'</span>)
+grid.<span class="fn">fit</span>(X_train, y_train)
+<span class="fn">print</span>(grid.best_params_)
+<span class="fn">print</span>(<span class="st">f"Best CV R^2: </span>{grid.best_score_:<span class="st">.3f}</span><span class="st">"</span>)</pre>
+</div>
+</section>
+
+<!-- SECTION 7: Advanced -->
+<section id="advanced">
+<h1>Advanced Topics</h1>
+<p class="subtitle">Custom transformers, visualization, and caching</p>
+
+<div class="card">
+<h3>Custom Transformers with <code>FunctionTransformer</code></h3>
+<pre><span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> <span class="cls">FunctionTransformer</span>
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+log_transform = <span class="cls">FunctionTransformer</span>(np.log1p, validate=<span class="kw">True</span>)
+
+pipe = <span class="cls">Pipeline</span>([
+    (<span class="st">'log'</span>,    log_transform),
+    (<span class="st">'scaler'</span>, <span class="cls">StandardScaler</span>()),
+    (<span class="st">'lasso'</span>,  <span class="cls">Lasso</span>())
+])</pre>
+</div>
+
+<div class="card">
+<h3>Visualizing a Pipeline</h3>
+<p>In modern versions of scikit-learn (1.4+), simply evaluating the pipeline object in a Jupyter Notebook cell automatically renders a beautiful, interactive HTML diagram:</p>
+<pre>pipe  <span class="cm"># Type the variable name as the last line in a cell to display it</span></pre>
+<p style="font-size: 0.85rem; color: var(--muted); margin-top: 8px;"><em>Note: If you are using an older version and it prints text instead, you can manually enable it using <code>sklearn.set_config(display='diagram')</code>.</em></p>
+</div>
+
+<div class="card">
+<h3>Pipeline Memory (Caching)</h3>
+<p>Use the <code>memory</code> parameter to cache fitted transformers — useful when transformations are expensive:</p>
+<pre>pipe = <span class="cls">Pipeline</span>([
+    (<span class="st">'scaler'</span>, <span class="cls">StandardScaler</span>()),
+    (<span class="st">'lasso'</span>,  <span class="cls">Lasso</span>())
+], memory=<span class="st">'cache_dir'</span>)</pre>
+</div>
+</section>
+
+<!-- SECTION 8: Quiz -->
+<section id="quiz">
+<h1>Test Your Understanding</h1>
+<p class="subtitle">Check what you've learned about sklearn pipelines</p>
+
+<div class="quiz-q" id="q1">
+<p>1. What methods must all <em>intermediate</em> steps in a Pipeline implement?</p>
+<div class="quiz-opt" onclick="checkQ('q1',this,false)">A) fit() and predict()</div>
+<div class="quiz-opt" onclick="checkQ('q1',this,true)">B) fit() and transform()</div>
+<div class="quiz-opt" onclick="checkQ('q1',this,false)">C) transform() and predict()</div>
+<div class="quiz-opt" onclick="checkQ('q1',this,false)">D) Only fit()</div>
+<div class="quiz-feedback" id="q1fb"></div>
+</div>
+
+<div class="quiz-q" id="q2">
+<p>2. When <code>pipe.fit(X, y)</code> is called, what happens at intermediate steps?</p>
+<div class="quiz-opt" onclick="checkQ('q2',this,false)">A) Only transform(X) is called</div>
+<div class="quiz-opt" onclick="checkQ('q2',this,false)">B) Only fit(X, y) is called</div>
+<div class="quiz-opt" onclick="checkQ('q2',this,true)">C) fit_transform(X, y) is called, and the result is passed forward</div>
+<div class="quiz-opt" onclick="checkQ('q2',this,false)">D) predict(X) is called</div>
+<div class="quiz-feedback" id="q2fb"></div>
+</div>
+
+<div class="quiz-q" id="q3">
+<p>3. How do you reference the hyperparameter <code>alpha</code> of a step named <code>'lasso'</code> in GridSearchCV?</p>
+<div class="quiz-opt" onclick="checkQ('q3',this,false)">A) 'alpha'</div>
+<div class="quiz-opt" onclick="checkQ('q3',this,false)">B) 'lasso.alpha'</div>
+<div class="quiz-opt" onclick="checkQ('q3',this,true)">C) 'lasso__alpha'</div>
+<div class="quiz-opt" onclick="checkQ('q3',this,false)">D) 'pipeline__lasso__alpha'</div>
+<div class="quiz-feedback" id="q3fb"></div>
+</div>
+
+<div class="quiz-q" id="q4">
+<p>4. What is the main advantage of using a Pipeline with cross-validation?</p>
+<div class="quiz-opt" onclick="checkQ('q4',this,false)">A) It runs faster</div>
+<div class="quiz-opt" onclick="checkQ('q4',this,true)">B) It prevents data leakage by fitting transformers only on each training fold</div>
+<div class="quiz-opt" onclick="checkQ('q4',this,false)">C) It automatically selects the best model</div>
+<div class="quiz-opt" onclick="checkQ('q4',this,false)">D) It eliminates the need for feature engineering</div>
+<div class="quiz-feedback" id="q4fb"></div>
+</div>
+
+<div class="quiz-q" id="q5">
+<p>5. Which component allows applying different transformations to different column groups?</p>
+<div class="quiz-opt" onclick="checkQ('q5',this,false)">A) Pipeline</div>
+<div class="quiz-opt" onclick="checkQ('q5',this,false)">B) FeatureUnion</div>
+<div class="quiz-opt" onclick="checkQ('q5',this,true)">C) ColumnTransformer</div>
+<div class="quiz-opt" onclick="checkQ('q5',this,false)">D) FunctionTransformer</div>
+<div class="quiz-feedback" id="q5fb"></div>
+</div>
+
+<div class="quiz-q" id="q6">
+<p>6. When <code>pipe.predict(X_new)</code> is called on new data, what happens at intermediate steps?</p>
+<div class="quiz-opt" onclick="checkQ('q6',this,false)">A) fit_transform(X_new)</div>
+<div class="quiz-opt" onclick="checkQ('q6',this,true)">B) transform(X_new) using previously fitted parameters</div>
+<div class="quiz-opt" onclick="checkQ('q6',this,false)">C) fit(X_new) then transform(X_new)</div>
+<div class="quiz-opt" onclick="checkQ('q6',this,false)">D) predict(X_new)</div>
+<div class="quiz-feedback" id="q6fb"></div>
+</div>
+</section>
+
+</main>
+</div>
+
+<script>
+// ========== NAVIGATION ==========
+function showSec(id){
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
+  document.querySelector(`nav a[onclick="showSec('${id}')"]`).classList.add('active');
+  if(id==='flow') setTimeout(drawFlowDiagrams,100);
+}
+
+// Check window width to adjust mobile arrow display in CT section
+function checkCTMobile(){
+  const arrow = document.getElementById('ctMobileArrow');
+  if(window.innerWidth <= 600 && arrow){
+    arrow.style.display = 'block';
+  } else if (arrow) {
+    arrow.style.display = 'none';
+  }
+}
+window.addEventListener('resize', checkCTMobile);
+checkCTMobile();
+
+// ========== TABS ==========
+document.querySelectorAll('.tabs').forEach(tabBar=>{
+  tabBar.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click',()=>{
+      tabBar.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      const parent=tabBar.parentElement;
+      parent.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      document.getElementById(tab.dataset.p).classList.add('active');
+      if(tab.dataset.p==='fitPanel'||tab.dataset.p==='predPanel') drawFlowDiagrams();
+    });
+  });
+});
+
+// ========== FLOW DIAGRAMS ==========
+function hiDPI(canvas){
+  const r=window.devicePixelRatio||1;
+  const w=canvas.parentElement.clientWidth;
+  const h=parseInt(canvas.getAttribute('height'));
+  canvas.style.width=w+'px';canvas.style.height=h+'px';
+  canvas.width=w*r;canvas.height=h*r;
+  const ctx=canvas.getContext('2d');ctx.scale(r,r);
+  return{ctx,w,h};
+}
+
+function drawFlowDiagrams(){
+  drawFitFlow();drawPredFlow();
+}
+
+function drawRoundedRect(ctx,x,y,w,h,r,fill,stroke){
+  ctx.beginPath();ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill();}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();}
+}
+
+function drawArrow(ctx,x1,y1,x2,y2,color){
+  ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  const a=Math.atan2(y2-y1,x2-x1);const s=10;
+  ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-s*Math.cos(a-0.4),y2-s*Math.sin(a-0.4));
+  ctx.lineTo(x2-s*Math.cos(a+0.4),y2-s*Math.sin(a+0.4));ctx.fill();
+}
+
+function drawFlowBox(ctx,x,y,w,h,title,method,fill,border){
+  drawRoundedRect(ctx,x,y,w,h,10,fill,border);
+  ctx.fillStyle='#1b2e1b';ctx.font='bold 13px Segoe UI';ctx.textAlign='center';
+  ctx.fillText(title,x+w/2,y+h/2-8);
+  ctx.font='12px Cascadia Code, monospace';ctx.fillStyle='#2e7d32';
+  ctx.fillText(method,x+w/2,y+h/2+12);
+}
+
+function drawDataLabel(ctx,x,y,text){
+  ctx.fillStyle='#ef6c00';ctx.font='italic 12px Segoe UI';ctx.textAlign='center';
+  ctx.fillText(text,x,y);
+}
+
+function drawFitFlow(){
+  const c=document.getElementById('fitCanvas');if(!c)return;
+  const{ctx,w,h}=hiDPI(c);
+  ctx.clearRect(0,0,w,h);
+  const steps=[
+    {title:'Imputer',method:'.fit_transform(X,y)',fill:'#e8f5e9',border:'#2e7d32'},
+    {title:'Scaler',method:'.fit_transform(X,y)',fill:'#e8f5e9',border:'#2e7d32'},
+    {title:'Model',method:'.fit(X,y)',fill:'#e3f2fd',border:'#1565c0'}
+  ];
+  const bw=170,bh=65,gap=50,totalW=steps.length*bw+(steps.length-1)*gap;
+  const startX=(w-totalW)/2, cy=h/2-bh/2+20;
+
+  // Title
+  ctx.fillStyle='#2e7d32';ctx.font='bold 16px Segoe UI';ctx.textAlign='center';
+  ctx.fillText('pipe.fit(X_train, y_train)',w/2,30);
+
+  // Data labels
+  for(let i=0;i<steps.length;i++){
+    const x=startX+i*(bw+gap);
+    drawFlowBox(ctx,x,cy,bw,bh,steps[i].title,steps[i].method,steps[i].fill,steps[i].border);
+    if(i<steps.length-1){
+      drawArrow(ctx,x+bw+4,cy+bh/2,x+bw+gap-4,cy+bh/2,'#66bb6a');
+      drawDataLabel(ctx,x+bw+gap/2,cy-12,'X\'');
+    }
+  }
+  // Input
+  drawDataLabel(ctx,startX-25,cy+bh/2,'X →');
+  // Output
+  ctx.fillStyle='#1565c0';ctx.font='bold 12px Segoe UI';ctx.textAlign='left';
+  ctx.fillText('→ fitted pipe',startX+totalW+8,cy+bh/2+4);
+
+  // Bottom note
+  ctx.fillStyle='#5f7d5f';ctx.font='12px Segoe UI';ctx.textAlign='center';
+  ctx.fillText('Each transformer learns parameters (mean, std, etc.) AND transforms X before passing it forward.',w/2,h-20);
+}
+
+function drawPredFlow(){
+  const c=document.getElementById('predCanvas');if(!c)return;
+  const{ctx,w,h}=hiDPI(c);
+  ctx.clearRect(0,0,w,h);
+  const steps=[
+    {title:'Imputer',method:'.transform(X)',fill:'#e8f5e9',border:'#2e7d32'},
+    {title:'Scaler',method:'.transform(X)',fill:'#e8f5e9',border:'#2e7d32'},
+    {title:'Model',method:'.predict(X)',fill:'#e3f2fd',border:'#1565c0'}
+  ];
+  const bw=170,bh=65,gap=50,totalW=steps.length*bw+(steps.length-1)*gap;
+  const startX=(w-totalW)/2, cy=h/2-bh/2+20;
+
+  ctx.fillStyle='#1565c0';ctx.font='bold 16px Segoe UI';ctx.textAlign='center';
+  ctx.fillText('pipe.predict(X_new)',w/2,30);
+
+  for(let i=0;i<steps.length;i++){
+    const x=startX+i*(bw+gap);
+    drawFlowBox(ctx,x,cy,bw,bh,steps[i].title,steps[i].method,steps[i].fill,steps[i].border);
+    if(i<steps.length-1){
+      drawArrow(ctx,x+bw+4,cy+bh/2,x+bw+gap-4,cy+bh/2,'#66bb6a');
+      drawDataLabel(ctx,x+bw+gap/2,cy-12,'X\'');
+    }
+  }
+  drawDataLabel(ctx,startX-35,cy+bh/2,'X_new →');
+  ctx.fillStyle='#1565c0';ctx.font='bold 12px Segoe UI';ctx.textAlign='left';
+  ctx.fillText('→ ŷ predictions',startX+totalW+8,cy+bh/2+4);
+
+  ctx.fillStyle='#5f7d5f';ctx.font='12px Segoe UI';ctx.textAlign='center';
+  ctx.fillText('Transformers use parameters learned during fit() — no re-fitting occurs!',w/2,h-20);
+}
+
+// ========== QUIZ ==========
+const answers={
+  q1:'Correct! Intermediate steps must be transformers with fit() and transform().',
+  q2:'Correct! fit_transform() learns parameters AND transforms the data in one call.',
+  q3:'Correct! The double-underscore syntax stepname__param links parameters to specific steps.',
+  q4:'Correct! Without a pipeline, you might accidentally fit transformers on validation data too.',
+  q5:'Correct! ColumnTransformer routes different columns through different transformation pipelines.',
+  q6:'Correct! Only transform() is called — the transformer uses what it learned during fit().'
+};
+
+function checkQ(qid,el,correct){
+  const q=document.getElementById(qid);
+  if(q.dataset.answered)return;
+  q.dataset.answered='1';
+  const fb=document.getElementById(qid+'fb');
+  if(correct){
+    el.classList.add('correct');
+    fb.textContent='✅ '+answers[qid];
+    fb.style.background='#c8e6c9';fb.style.display='block';
+  }else{
+    el.classList.add('wrong');
+    // Highlight correct
+    q.querySelectorAll('.quiz-opt').forEach(o=>{
+      o.style.pointerEvents='none';
+    });
+    fb.textContent='❌ Not quite. The correct answer is highlighted in green.';
+    fb.style.background='#ffcdd2';fb.style.display='block';
+    // Find correct
+    q.querySelectorAll('.quiz-opt').forEach(o=>{
+      if(!o.classList.contains('wrong')){
+        // This is a hacky check — we mark correct based on onclick
+        const oc=o.getAttribute('onclick');
+        if(oc&&oc.includes('true'))o.classList.add('correct');
+      }
+    });
+  }
+}
+
+// Draw flow diagrams on load if visible
+window.addEventListener('resize',()=>{if(document.getElementById('flow').classList.contains('active'))drawFlowDiagrams();});
+</script>
+</body>
+</html>
