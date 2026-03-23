@@ -170,7 +170,8 @@ SSE = Σ eᵢ² <span class="cm">// sum of squared residuals</span></div>
 <div>
 <div class="g2" id="sp-metrics"></div>
 <div class="viz"><canvas id="sp-bar" height="80"></canvas></div>
-<div class="sb"><div class="sl">80/20 Rule (Pareto Principle)</div>A common split: <strong>80% training, 20% testing</strong>. Loosely inspired by the Pareto principle — 80% of effect is driven by 20% of causes. In practice, ratio depends on dataset size.</div>
+<div class="sb"><div class="sl">80/20 Rule (Pareto Principle)</div>A common split: <strong>80% training, 20% testing</strong>. Loosely inspired by the Pareto principle — 80% of effect is driven by 20% of causes. In practice, ratio depends on dataset size. There is no theoretically optimal ratio. It's always a tradeoff — more training data improves the model, more test data improves your confidence in the evaluation.
+</div>
 <div class="warn">⚠️ <strong>Never</strong> use test data during training or tuning! The test set must remain <strong>unseen</strong> until final evaluation. Using it earlier causes <em>data leakage</em> — overly optimistic metrics that don't reflect real-world performance.</div>
 <div class="note"><strong>Scaling after split:</strong> Fit the scaler on training data only (<code>fit_transform</code>), then apply to test data (<code>transform</code>). This prevents information from the test set leaking into training.</div>
 </div>
