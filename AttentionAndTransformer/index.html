@@ -4,76 +4,155 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Attention Is All You Need — Interactive Transformer Guide</title>
-<meta name="description" content="Interactive step-by-step guide to the Transformer architecture from the 'Attention is All You Need' paper (Vaswani et al., 2017).">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="description" content="Interactive step-by-step guide to the Transformer architecture from 'Attention is All You Need' (Vaswani et al., 2017).">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--o50:#fff7ed;--o100:#ffedd5;--o200:#fed7aa;--o300:#fdba74;--o400:#fb923c;--o500:#f97316;--o600:#ea580c;--o700:#c2410c;--g50:#fafafa;--g100:#f4f4f5;--g200:#e4e4e7;--g300:#d4d4d8;--g400:#a1a1aa;--g500:#71717a;--g600:#52525b;--g700:#3f3f46;--g800:#27272a;--g900:#18181b;--bg:#f8f9fa;--card:#fff;--border:#e9ecef;--txt:#212529;--txt2:#495057;--txtm:#868e96;--b500:#3b82f6;--b50:#eff6ff;--gn500:#22c55e;--gn50:#f0fdf4;--r500:#ef4444;--r50:#fef2f2;--p500:#a855f7;--p50:#faf5ff;--t500:#14b8a6;--t50:#f0fdfa;}
+:root{
+  --bg:#fafaf9;--card:#fff;--card2:#f5f5f4;--border:#e7e5e4;--border2:#d6d3d1;
+  --txt:#1c1917;--txt2:#44403c;--txtm:#78716c;--txtf:#a8a29e;
+  --acc:#e11d48;--acc2:#be123c;--accbg:#fff1f2;--accbrd:#fecdd3;
+  --blue:#2563eb;--bluebg:#eff6ff;--bluebrd:#bfdbfe;
+  --green:#16a34a;--greenbg:#f0fdf4;--greenbrd:#bbf7d0;
+  --purple:#7c3aed;--purplebg:#faf5ff;--purplebrd:#e9d5ff;
+  --teal:#0d9488;--tealbg:#f0fdfa;--tealbrd:#99f6e4;
+  --amber:#d97706;--amberbg:#fffbeb;--amberbrd:#fde68a;
+  --q:#e11d48;--k:#2563eb;--v:#16a34a;
+  --radius:10px;--radius-lg:14px;
+}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--txt);line-height:1.6;}
-.hdr{background:var(--card);border-bottom:1px solid var(--border);padding:1rem 2rem;position:sticky;top:0;z-index:100;}
-.hdr-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;}
-.hdr-t{font-size:1.25rem;font-weight:700;background:linear-gradient(135deg,var(--o500),var(--o600));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.hdr-s{font-size:0.68rem;color:var(--txtm);font-family:'JetBrains Mono',monospace;}
-.nav{background:var(--card);border-bottom:1px solid var(--border);padding:0 2rem;overflow-x:auto;position:sticky;top:52px;z-index:99;-webkit-overflow-scrolling:touch;}
-.nav-in{max-width:1100px;margin:0 auto;display:flex;gap:0;}
-.nb{padding:0.6rem 0.8rem;font-family:'Space Grotesk',sans-serif;font-size:0.73rem;font-weight:500;color:var(--txtm);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:all .2s;}
-.nb:hover{color:var(--txt);}.nb.on{color:var(--o600);border-bottom-color:var(--o500);font-weight:600;}
-.mn{max-width:1100px;margin:0 auto;padding:1.5rem 2rem 3rem;}
-.sec{display:none;}.sec.on{display:block;}
-.sh{margin-bottom:1.5rem;}.sh h2{font-size:1.35rem;font-weight:700;margin-bottom:0.25rem;}.sh p{color:var(--txt2);font-size:0.88rem;max-width:720px;}
-.cd{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.3rem;margin-bottom:1.1rem;}
-.ct{font-size:0.9rem;font-weight:650;margin-bottom:0.55rem;display:flex;align-items:center;gap:0.45rem;}
-.ic{width:25px;height:25px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.78rem;flex-shrink:0;}
-.io{background:var(--o50);border:1px solid var(--o200);}.ib{background:var(--b50);border:1px solid #bfdbfe;}.ig{background:var(--gn50);border:1px solid #bbf7d0;}.ip{background:var(--p50);border:1px solid #e9d5ff;}.ir{background:var(--r50);border:1px solid #fecaca;}.it{background:var(--t50);border:1px solid #99f6e4;}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem;}
-@media(max-width:768px){.g2,.g3{grid-template-columns:1fr;}.nav{top:46px;}}
-.desc{font-size:0.84rem;color:var(--txt2);line-height:1.65;margin-bottom:0.55rem;}
-.igrp{margin-bottom:0.5rem;}.igrp label{display:block;font-size:0.68rem;font-weight:600;color:var(--txt2);margin-bottom:0.2rem;text-transform:uppercase;letter-spacing:.04em;}
-input[type="number"],input[type="text"],select,textarea{font-family:'JetBrains Mono',monospace;font-size:0.82rem;padding:0.4rem 0.6rem;border:1px solid var(--g300);border-radius:8px;background:var(--card);color:var(--txt);width:100%;transition:border-color .2s;}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--o400);box-shadow:0 0 0 3px rgba(249,115,22,.1);}
-.btn{font-family:'Space Grotesk',sans-serif;font-size:0.78rem;font-weight:600;padding:0.45rem 0.9rem;border-radius:8px;border:none;cursor:pointer;transition:all .2s;}
-.bp{background:linear-gradient(135deg,var(--o500),var(--o600));color:#fff;}.bp:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(249,115,22,.3);}
-.bo{background:transparent;border:1px solid var(--g300);color:var(--txt2);}.bo:hover{border-color:var(--o400);color:var(--o600);}
-.cr{display:flex;gap:0.6rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:0.6rem;}.cr .igrp{margin-bottom:0;flex:1;min-width:100px;}
-.fb{background:var(--g900);color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:0.8rem;padding:0.75rem 1rem;border-radius:8px;margin:0.5rem 0;overflow-x:auto;line-height:1.75;}.fb .hl{color:var(--o400);font-weight:600;}.fb .cm{color:var(--g500);}.fb .kw{color:#60a5fa;}.fb .gn{color:#4ade80;font-weight:600;}
-.sb{background:var(--o50);border:1px solid var(--o200);border-radius:8px;padding:0.7rem 1rem;margin:0.5rem 0;font-size:0.82rem;}.sb .sl{font-family:'JetBrains Mono',monospace;font-size:0.64rem;font-weight:700;color:var(--o600);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.15rem;}
-.rb{background:var(--gn50);border:1px solid #bbf7d0;border-radius:8px;padding:0.7rem 1rem;margin:0.5rem 0;font-size:0.82rem;}.rb .rl{font-family:'JetBrains Mono',monospace;font-size:0.64rem;font-weight:700;color:var(--gn500);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.15rem;}
-.bb{background:var(--b50);border:1px solid #bfdbfe;border-radius:8px;padding:0.7rem 1rem;margin:0.5rem 0;font-size:0.82rem;}.bb .bl{font-family:'JetBrains Mono',monospace;font-size:0.64rem;font-weight:700;color:var(--b500);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.15rem;}
-.pb{background:var(--p50);border:1px solid #e9d5ff;border-radius:8px;padding:0.7rem 1rem;margin:0.5rem 0;font-size:0.82rem;}.pb .pl{font-family:'JetBrains Mono',monospace;font-size:0.64rem;font-weight:700;color:var(--p500);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.15rem;}
-.co{display:flex;gap:0.5rem;padding:0.7rem;border-radius:8px;font-size:0.82rem;margin:0.5rem 0;align-items:flex-start;}.coo{background:var(--o50);border:1px solid var(--o200);}.cob{background:var(--b50);border:1px solid #bfdbfe;}.ci{font-size:1rem;flex-shrink:0;margin-top:.05rem;}
-.ilc{font-family:'JetBrains Mono',monospace;font-size:0.76rem;background:var(--g100);padding:0.08rem 0.28rem;border-radius:4px;border:1px solid var(--g200);}
-.tg{font-family:'JetBrains Mono',monospace;font-size:0.58rem;font-weight:500;padding:0.14rem 0.38rem;border-radius:4px;display:inline-block;}
-.to{background:var(--o50);color:var(--o700);border:1px solid var(--o200);}.tb{background:var(--b50);color:#1d4ed8;border:1px solid #bfdbfe;}.tgn{background:var(--gn50);color:#15803d;border:1px solid #bbf7d0;}.tp{background:var(--p50);color:#7c3aed;border:1px solid #e9d5ff;}.tt{background:var(--t50);color:#0d9488;border:1px solid #99f6e4;}
-.pill-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.5rem;}.pill{padding:0.35rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:500;border:1px solid var(--g300);color:var(--txt2);cursor:pointer;transition:all .2s;background:var(--card);}.pill:hover{border-color:var(--o400);}.pill.on{background:var(--o500);color:#fff;border-color:var(--o500);}
-canvas{border-radius:8px;display:block;max-width:100%;margin:0.4rem auto;}
-.viz-wrap{background:var(--g50);border:1px solid var(--g200);border-radius:10px;padding:0.65rem;margin:0.5rem 0;position:relative;}
-.viz-label{font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:var(--g400);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.3rem;font-weight:600;}
-.mtx{display:inline-grid;gap:1px;font-family:'JetBrains Mono',monospace;font-size:0.72rem;margin:0.3rem;vertical-align:middle;}
-.mtx td{padding:0.25rem 0.4rem;text-align:center;background:var(--g50);border:1px solid var(--g200);min-width:42px;border-radius:3px;transition:background .2s;}
-.mtx td.hi{background:var(--o100);color:var(--o700);font-weight:600;}
-.mtx td.hi2{background:var(--b50);color:#1d4ed8;font-weight:600;}
-.mtx td.hi3{background:var(--gn50);color:#15803d;font-weight:600;}
-.mtx td.hi4{background:var(--p50);color:#7c3aed;font-weight:600;}
-.mtx-label{font-family:'JetBrains Mono',monospace;font-size:0.65rem;font-weight:700;color:var(--g500);text-align:center;margin-bottom:0.2rem;}
-.eq{font-size:1.4rem;color:var(--g400);margin:0 0.4rem;vertical-align:middle;}
-.stat-card{text-align:center;padding:0.6rem;background:var(--g50);border-radius:8px;border:1px solid var(--g200);}.stat-val{font-family:'JetBrains Mono',monospace;font-size:1.15rem;font-weight:700;color:var(--o600);}.stat-lbl{font-size:0.62rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-top:0.1rem;}
-.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;}@media(max-width:768px){.g4{grid-template-columns:repeat(2,1fr);}}
-.arch-block{display:inline-block;padding:0.4rem 0.7rem;border-radius:6px;font-size:0.72rem;font-weight:600;margin:0.15rem;cursor:pointer;transition:all .2s;border:2px solid transparent;}.arch-block:hover{transform:scale(1.05);}
-.ab-o{background:var(--o100);color:var(--o700);}.ab-o:hover,.ab-o.sel{border-color:var(--o500);}
-.ab-b{background:#dbeafe;color:#1d4ed8;}.ab-b:hover,.ab-b.sel{border-color:var(--b500);}
-.ab-g{background:#dcfce7;color:#15803d;}.ab-g:hover,.ab-g.sel{border-color:var(--gn500);}
-.ab-p{background:#f3e8ff;color:#7c3aed;}.ab-p:hover,.ab-p.sel{border-color:var(--p500);}
-.ab-t{background:#ccfbf1;color:#0d9488;}.ab-t:hover,.ab-t.sel{border-color:var(--t500);}
-.ab-r{background:#fee2e2;color:#dc2626;}.ab-r:hover,.ab-r.sel{border-color:var(--r500);}
-.arch-arrow{color:var(--g400);font-size:1.1rem;margin:0.15rem 0;display:block;text-align:center;}
-.ref{font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--g400);margin-top:0.3rem;}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--txt);line-height:1.65;-webkit-font-smoothing:antialiased;}
+::selection{background:var(--accbg);color:var(--acc);}
+
+/* Header */
+.hdr{background:var(--card);border-bottom:1px solid var(--border);padding:0.9rem 2rem;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px);background:rgba(255,255,255,0.92);}
+.hdr-in{max-width:1140px;margin:0 auto;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+.hdr-t{font-size:1.2rem;font-weight:700;letter-spacing:-0.02em;color:var(--txt);}
+.hdr-t span{color:var(--acc);font-weight:700;}
+.hdr-s{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--txtm);letter-spacing:0.03em;}
+
+/* Navigation */
+.nav{background:var(--card);border-bottom:1px solid var(--border);padding:0 2rem;overflow-x:auto;position:sticky;top:49px;z-index:99;-webkit-overflow-scrolling:touch;}
+.nav-in{max-width:1140px;margin:0 auto;display:flex;gap:0;}
+.nb{padding:0.55rem 0.85rem;font-family:'Outfit',sans-serif;font-size:0.76rem;font-weight:500;color:var(--txtm);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:all .2s;letter-spacing:0.01em;}
+.nb:hover{color:var(--txt);}.nb.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:600;}
+
+/* Main */
+.mn{max-width:1140px;margin:0 auto;padding:1.5rem 2rem 4rem;}
+.sec{display:none;animation:fadeIn .3s ease;}.sec.on{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* Section header */
+.sh{margin-bottom:1.8rem;}
+.sh h2{font-size:1.5rem;font-weight:700;letter-spacing:-0.025em;margin-bottom:0.35rem;}
+.sh h2 .num{color:var(--acc);font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:1.1rem;margin-right:0.4rem;}
+.sh p{color:var(--txt2);font-size:0.9rem;max-width:740px;line-height:1.7;}
+
+/* Cards */
+.cd{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.4rem;margin-bottom:1.2rem;transition:box-shadow .2s;}
+.cd:hover{box-shadow:0 2px 12px rgba(0,0,0,0.04);}
+.ct{font-size:0.92rem;font-weight:600;margin-bottom:0.6rem;display:flex;align-items:center;gap:0.5rem;letter-spacing:-0.01em;}
+.ic{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:0.82rem;flex-shrink:0;}
+.io{background:var(--accbg);border:1px solid var(--accbrd);}
+.ib{background:var(--bluebg);border:1px solid var(--bluebrd);}
+.ig{background:var(--greenbg);border:1px solid var(--greenbrd);}
+.ip{background:var(--purplebg);border:1px solid var(--purplebrd);}
+.it{background:var(--tealbg);border:1px solid var(--tealbrd);}
+.ia{background:var(--amberbg);border:1px solid var(--amberbrd);}
+
+/* Grid */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:0.6rem;}
+@media(max-width:768px){.g2,.g3,.g4{grid-template-columns:1fr;}.nav{top:44px;}.mn{padding:1rem 1rem 3rem;}}
+
+/* Text */
+.desc{font-size:0.86rem;color:var(--txt2);line-height:1.7;margin-bottom:0.55rem;}
+.desc strong{color:var(--txt);font-weight:600;}
+
+/* Code blocks */
+.fb{background:#1c1917;color:#e7e5e4;font-family:'IBM Plex Mono',monospace;font-size:0.78rem;padding:0.85rem 1.1rem;border-radius:var(--radius);margin:0.6rem 0;overflow-x:auto;line-height:1.8;}
+.fb .hl{color:var(--acc);font-weight:600;}.fb .cm{color:#78716c;}.fb .kw{color:#60a5fa;}.fb .gn{color:#4ade80;font-weight:600;}
+
+/* Callout boxes */
+.sb{border-radius:var(--radius);padding:0.8rem 1.1rem;margin:0.6rem 0;font-size:0.84rem;line-height:1.65;}
+.sb .sl{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.2rem;}
+.s-rose{background:var(--accbg);border:1px solid var(--accbrd);}.s-rose .sl{color:var(--acc);}
+.s-blue{background:var(--bluebg);border:1px solid var(--bluebrd);}.s-blue .sl{color:var(--blue);}
+.s-green{background:var(--greenbg);border:1px solid var(--greenbrd);}.s-green .sl{color:var(--green);}
+.s-purple{background:var(--purplebg);border:1px solid var(--purplebrd);}.s-purple .sl{color:var(--purple);}
+.s-teal{background:var(--tealbg);border:1px solid var(--tealbrd);}.s-teal .sl{color:var(--teal);}
+.s-amber{background:var(--amberbg);border:1px solid var(--amberbrd);}.s-amber .sl{color:var(--amber);}
+
+/* Inline code */
+.ilc{font-family:'IBM Plex Mono',monospace;font-size:0.76rem;background:var(--card2);padding:0.1rem 0.35rem;border-radius:5px;border:1px solid var(--border);}
+
+/* Form elements */
+.igrp{margin-bottom:0.5rem;}
+.igrp label{display:block;font-size:0.66rem;font-weight:600;color:var(--txtm);margin-bottom:0.2rem;text-transform:uppercase;letter-spacing:.04em;font-family:'IBM Plex Mono',monospace;}
+input[type="number"],input[type="text"],select,textarea{font-family:'IBM Plex Mono',monospace;font-size:0.82rem;padding:0.45rem 0.65rem;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--txt);width:100%;transition:all .2s;}
+input:focus,select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(225,29,72,.08);}
+.cr{display:flex;gap:0.6rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:0.7rem;}.cr .igrp{margin-bottom:0;flex:1;min-width:100px;}
+
+/* Buttons */
+.btn{font-family:'Outfit',sans-serif;font-size:0.78rem;font-weight:600;padding:0.45rem 1rem;border-radius:8px;border:none;cursor:pointer;transition:all .15s;letter-spacing:0.01em;}
+.bp{background:var(--acc);color:#fff;}.bp:hover{background:var(--acc2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(225,29,72,.25);}
+.bo{background:transparent;border:1px solid var(--border2);color:var(--txt2);}.bo:hover{border-color:var(--acc);color:var(--acc);}
+
+/* Pills */
+.pill-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.7rem;}
+.pill{padding:0.4rem 0.8rem;border-radius:20px;font-size:0.76rem;font-weight:500;border:1px solid var(--border2);color:var(--txt2);cursor:pointer;transition:all .15s;background:var(--card);}
+.pill:hover{border-color:var(--acc);color:var(--acc);}.pill.on{background:var(--acc);color:#fff;border-color:var(--acc);}
+
+/* Canvas & viz */
+canvas{border-radius:var(--radius);display:block;max-width:100%;margin:0.4rem auto;}
+.viz-wrap{background:var(--card2);border:1px solid var(--border);border-radius:var(--radius);padding:0.7rem;margin:0.6rem 0;position:relative;}
+.viz-label{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--txtm);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.35rem;font-weight:600;}
+
+/* Matrix */
+.mtx{display:inline-grid;gap:1px;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;margin:0.3rem;vertical-align:middle;}
+.mtx td{padding:0.28rem 0.45rem;text-align:center;background:var(--card2);border:1px solid var(--border);min-width:42px;border-radius:4px;transition:all .2s;}
+.mtx td.hi{background:var(--accbg);color:var(--acc);font-weight:600;}
+.mtx td.hi2{background:var(--bluebg);color:var(--blue);font-weight:600;}
+.mtx td.hi3{background:var(--greenbg);color:var(--green);font-weight:600;}
+.mtx td.hi4{background:var(--purplebg);color:var(--purple);font-weight:600;}
+.mtx-label{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;font-weight:600;color:var(--txtm);text-align:center;margin-bottom:0.25rem;}
+.eq{font-size:1.3rem;color:var(--txtf);margin:0 0.5rem;vertical-align:middle;}
+
+/* Stat cards */
+.stat-card{text-align:center;padding:0.7rem;background:var(--card2);border-radius:var(--radius);border:1px solid var(--border);}
+.stat-val{font-family:'IBM Plex Mono',monospace;font-size:1.15rem;font-weight:700;color:var(--acc);}
+.stat-lbl{font-size:0.6rem;color:var(--txtm);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-top:0.15rem;}
+
+/* Architecture blocks */
+.arch-block{display:inline-block;padding:0.45rem 0.8rem;border-radius:7px;font-size:0.74rem;font-weight:600;margin:0.15rem;cursor:pointer;transition:all .15s;border:2px solid transparent;letter-spacing:0.01em;}
+.arch-block:hover{transform:scale(1.04);}
+.ab-o{background:var(--accbg);color:var(--acc);}.ab-o:hover,.ab-o.sel{border-color:var(--acc);}
+.ab-b{background:var(--bluebg);color:var(--blue);}.ab-b:hover,.ab-b.sel{border-color:var(--blue);}
+.ab-g{background:var(--greenbg);color:var(--green);}.ab-g:hover,.ab-g.sel{border-color:var(--green);}
+.ab-p{background:var(--purplebg);color:var(--purple);}.ab-p:hover,.ab-p.sel{border-color:var(--purple);}
+.ab-t{background:var(--tealbg);color:var(--teal);}.ab-t:hover,.ab-t.sel{border-color:var(--teal);}
+.ab-r{background:#fef2f2;color:#dc2626;}.ab-r:hover,.ab-r.sel{border-color:#dc2626;}
+.arch-arrow{color:var(--txtf);font-size:1rem;margin:0.15rem 0;display:block;text-align:center;}
+
+/* Attention heatmap */
+.attn-heatmap{display:inline-grid;gap:2px;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;}
+.attn-heatmap td{padding:0.3rem 0.5rem;text-align:center;border-radius:4px;min-width:48px;transition:all .2s;cursor:default;}
+.attn-token{padding:0.4rem 0.7rem;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:0.8rem;font-weight:500;cursor:pointer;transition:all .15s;border:2px solid transparent;display:inline-block;margin:0.15rem;}
+.attn-token:hover,.attn-token.sel{border-color:var(--acc);background:var(--accbg);}
+
+/* Analogy cards */
+.analogy{display:grid;grid-template-columns:60px 1fr;gap:0.8rem;align-items:start;padding:0.9rem 1rem;border-radius:var(--radius);margin:0.5rem 0;}
+.analogy-icon{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
+
+.ref{font-family:'IBM Plex Mono',monospace;font-size:0.63rem;color:var(--txtf);margin-top:0.35rem;}
 </style>
 </head>
 <body>
-<header class="hdr"><div class="hdr-in"><div><div class="hdr-t">Attention Is All You Need</div><div class="hdr-s">Interactive Transformer Guide · Vaswani et al. (2017)</div></div></div></header>
+<header class="hdr"><div class="hdr-in"><div><div class="hdr-t"><span>Attention</span> Is All You Need</div><div class="hdr-s">Interactive Transformer Guide · Vaswani et al. (2017) · NeurIPS</div></div></div></header>
 <nav class="nav"><div class="nav-in">
 <button class="nb on" onclick="go('overview',this)">Architecture</button>
 <button class="nb" onclick="go('embed',this)">Embeddings</button>
+<button class="nb" onclick="go('intuition',this)">Intuition</button>
 <button class="nb" onclick="go('attention',this)">Self-Attention</button>
 <button class="nb" onclick="go('multihead',this)">Multi-Head</button>
 <button class="nb" onclick="go('encoder',this)">Encoder</button>
@@ -85,15 +164,15 @@ canvas{border-radius:8px;display:block;max-width:100%;margin:0.4rem auto;}
 
 <!-- ═══════ OVERVIEW ═══════ -->
 <div id="s-overview" class="sec on">
-<div class="sh"><h2>The Transformer Architecture</h2><p>The Transformer (Vaswani et al., 2017) replaced recurrence and convolution with <strong>attention mechanisms</strong> alone. It processes all positions in parallel, enabling much faster training and better long-range dependency modeling.</p></div>
+<div class="sh"><h2><span class="num">01</span>The Transformer Architecture</h2><p>The Transformer (Vaswani et al., 2017) replaced recurrence with <strong>self-attention</strong>, processing all positions in parallel. This single architectural change enabled modern LLMs, from BERT to GPT-4.</p></div>
 
 <div class="cd">
-<div class="ct"><span class="ic io">🏗️</span> Interactive Architecture — Click any block to learn more</div>
-<p class="desc">This is the architecture from Figure 1 of the paper. The left side is the <strong>Encoder</strong> (processes the input), the right side is the <strong>Decoder</strong> (generates the output). Click any component to see its explanation below:</p>
+<div class="ct"><span class="ic io">⬡</span> Interactive Architecture — click any block</div>
+<p class="desc">The left stack is the <strong>Encoder</strong> (reads the input), the right is the <strong>Decoder</strong> (generates the output). Click any component:</p>
 <div class="g2">
 <div style="text-align:center;">
 <div class="viz-label">Encoder (×N)</div>
-<div style="background:var(--g50);border:2px solid var(--o300);border-radius:12px;padding:1rem;display:inline-block;">
+<div style="background:var(--card2);border:2px solid var(--acc);border-radius:var(--radius-lg);padding:1rem;display:inline-block;">
 <span class="arch-block ab-g" onclick="archInfo('ffn')">Feed-Forward Network</span>
 <div class="arch-arrow">↑ Add & Norm</div>
 <span class="arch-block ab-o" onclick="archInfo('mha')">Multi-Head Attention</span>
@@ -105,7 +184,7 @@ canvas{border-radius:8px;display:block;max-width:100%;margin:0.4rem auto;}
 </div>
 <div style="text-align:center;">
 <div class="viz-label">Decoder (×N)</div>
-<div style="background:var(--g50);border:2px solid var(--b500);border-radius:12px;padding:1rem;display:inline-block;">
+<div style="background:var(--card2);border:2px solid var(--blue);border-radius:var(--radius-lg);padding:1rem;display:inline-block;">
 <span class="arch-block ab-r" onclick="archInfo('linear')">Linear + Softmax → Output</span>
 <div class="arch-arrow">↑</div>
 <span class="arch-block ab-g" onclick="archInfo('ffn')">Feed-Forward Network</span>
@@ -121,154 +200,205 @@ canvas{border-radius:8px;display:block;max-width:100%;margin:0.4rem auto;}
 </div>
 </div>
 <div id="arch-detail" style="margin-top:0.75rem;">
-<div class="sb"><div class="sl">Click a block above</div>Each component will be explained with its formula and role in the architecture.</div>
+<div class="sb s-rose"><div class="sl">Click a block above</div>Each component will be explained with its formula and role.</div>
 </div>
 </div>
 
 <div class="g3">
-<div class="cd"><div class="ct"><span class="ic ig">⚡</span> Parallel Processing</div><p class="desc">Unlike RNNs that process tokens sequentially, the Transformer attends to all positions simultaneously. Training time drops from O(n) sequential steps to O(1).</p></div>
-<div class="cd"><div class="ct"><span class="ic ib">🔗</span> Long-Range Dependencies</div><p class="desc">Self-attention connects every position to every other position directly. No more vanishing gradients over long sequences — path length is O(1).</p></div>
-<div class="cd"><div class="ct"><span class="ic ip">📐</span> Key Dimensions</div><p class="desc">The paper uses: <span class="ilc">d_model = 512</span>, <span class="ilc">h = 8</span> heads, <span class="ilc">d_k = d_v = 64</span>, <span class="ilc">d_ff = 2048</span>, <span class="ilc">N = 6</span> layers.</p></div>
-</div>
-
-<div class="cd">
-<div class="ct"><span class="ic io">📄</span> Paper Reference</div>
-<p class="desc">Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.N., Kaiser, Ł. and Polosukhin, I. (2017). <em>Attention Is All You Need.</em> Advances in Neural Information Processing Systems 30 (NIPS 2017).</p>
-<div class="fb"><span class="cm">// The dominant sequence transduction models are based on complex</span><br><span class="cm">// recurrent or convolutional neural networks... We propose a new</span><br><span class="cm">// simple network architecture, the Transformer, based solely on</span><br><span class="cm">// attention mechanisms, dispensing with recurrence and convolutions</span><br><span class="cm">// entirely.</span> <span class="hl">— Abstract, Vaswani et al. (2017)</span></div>
+<div class="cd"><div class="ct"><span class="ic ig">⚡</span> Parallel processing</div><p class="desc">Unlike RNNs that process tokens one by one, the Transformer attends to all positions simultaneously. Training time drops from O(n) sequential steps to O(1).</p></div>
+<div class="cd"><div class="ct"><span class="ic ib">◎</span> Direct connections</div><p class="desc">Self-attention connects every token to every other token in a single step. No vanishing gradients — the path length between any two tokens is O(1).</p></div>
+<div class="cd"><div class="ct"><span class="ic ip">▦</span> Key dimensions</div><p class="desc"><span class="ilc">d_model=512</span> <span class="ilc">h=8</span> heads <span class="ilc">d_k=d_v=64</span> <span class="ilc">d_ff=2048</span> <span class="ilc">N=6</span> layers</p></div>
 </div>
 </div>
 
-<!-- ═══════ EMBEDDINGS + POSITIONAL ENCODING ═══════ -->
+<!-- ═══════ EMBEDDINGS ═══════ -->
 <div id="s-embed" class="sec">
-<div class="sh"><h2>Input Embeddings & Positional Encoding</h2><p>Tokens are mapped to dense vectors, then positional information is added so the model knows token order. Without positional encoding, the Transformer would be a "bag of words" — it couldn't distinguish "dog bites man" from "man bites dog".</p></div>
+<div class="sh"><h2><span class="num">02</span>Embeddings & Positional Encoding</h2><p>Tokens become dense vectors, then positional information is added. Without position encoding, the Transformer can't distinguish "dog bites man" from "man bites dog."</p></div>
 
 <div class="cd">
-<div class="ct"><span class="ic ib">🔤</span> Step 1: Token Embedding</div>
-<p class="desc">Each token in the vocabulary gets mapped to a learned vector of dimension <span class="ilc">d_model = 512</span>. In our simplified example we use <span class="ilc">d_model = 4</span> for visibility. The embeddings are multiplied by <span class="ilc">√d_model</span> (Section 3.4 of the paper).</p>
-<div class="igrp"><label>Input Sentence</label>
-<input type="text" id="embed-input" value="the cat sat" onkeyup="computeEmbed()" placeholder="Type a sentence...">
+<div class="ct"><span class="ic ib">▤</span> Step 1: Token embedding</div>
+<p class="desc">Each token maps to a learned vector of dimension <span class="ilc">d_model=512</span>. We use <span class="ilc">d_model=4</span> here for visibility. Embeddings are scaled by <span class="ilc">√d_model</span> (Section 3.4).</p>
+<div class="igrp"><label>Input sentence</label>
+<input type="text" id="embed-input" value="the cat sat" onkeyup="computeEmbed()" placeholder="Type tokens...">
 </div>
 <div id="embed-tokens"></div>
-<div class="fb"><span class="cm">// Section 3.4: "we multiply those weights by √d_model"</span><br>
-embedding(token) = lookup(token) × <span class="hl">√d_model</span></div>
 </div>
 
 <div class="cd">
-<div class="ct"><span class="ic ip">🌊</span> Step 2: Positional Encoding (Sinusoidal)</div>
-<p class="desc">Since the Transformer has no recurrence or convolution, position information must be injected explicitly. The paper uses sine and cosine functions at different frequencies — each dimension gets a unique wave pattern. This allows the model to learn relative positions.</p>
-<div class="fb"><span class="kw">PE</span>(pos, 2i) &nbsp;&nbsp;&nbsp;= sin(pos / 10000^(2i/<span class="hl">d_model</span>))<br><span class="kw">PE</span>(pos, 2i+1) = cos(pos / 10000^(2i/<span class="hl">d_model</span>))<br><br><span class="cm">// pos = position in sequence (0, 1, 2, ...)</span><br><span class="cm">// i = dimension index (0, 1, 2, ... d_model/2)</span></div>
+<div class="ct"><span class="ic ip">∿</span> Step 2: Sinusoidal positional encoding</div>
+<p class="desc">Position information uses sine/cosine waves at different frequencies — each dimension gets a unique pattern. Low dimensions oscillate fast (fine position), high dimensions oscillate slowly (coarse position).</p>
+<div class="fb"><span class="kw">PE</span>(pos, 2i) &nbsp;&nbsp;= sin(pos / 10000<sup>2i/d_model</sup>)<br><span class="kw">PE</span>(pos, 2i+1) = cos(pos / 10000<sup>2i/d_model</sup>)</div>
 <div class="g2">
 <div>
-<div class="igrp"><label>Sequence Length</label><input type="number" id="pe-len" value="6" min="2" max="20" onchange="drawPE()"></div>
-<div class="igrp"><label>d_model</label><input type="number" id="pe-dim" value="16" min="4" max="64" step="2" onchange="drawPE()"></div>
+<div class="igrp"><label>Sequence length</label><input type="number" id="pe-len" value="8" min="2" max="20" onchange="drawPE()"></div>
+<div class="igrp"><label>d_model</label><input type="number" id="pe-dim" value="32" min="4" max="64" step="2" onchange="drawPE()"></div>
 </div>
-<div>
-<div class="sb"><div class="sl">Why sinusoidal?</div>
-For any fixed offset <em>k</em>, PE(pos+k) can be represented as a linear function of PE(pos). This means the model can learn to attend to relative positions. The wavelengths form a geometric progression from 2π to 10000·2π.</div>
+<div class="sb s-purple"><div class="sl">Why sinusoidal?</div>For any offset <em>k</em>, PE(pos+k) is a linear function of PE(pos). This lets the model learn relative positions. Wavelengths form a geometric progression from 2π to 10000·2π.</div>
 </div>
-</div>
-<div class="viz-wrap"><div class="viz-label">Positional Encoding Heatmap — rows = positions, cols = dimensions</div><canvas id="pe-canvas" height="220"></canvas></div>
-<div id="pe-detail"></div>
+<div class="viz-wrap"><div class="viz-label">Positional encoding heatmap — rows = positions, cols = dimensions</div><canvas id="pe-canvas" height="240"></canvas></div>
 </div>
 
 <div class="cd">
-<div class="ct"><span class="ic ig">➕</span> Step 3: Embedding + Positional Encoding = Model Input</div>
-<p class="desc">The final input to the encoder/decoder is simply the element-wise <strong>sum</strong> of the token embedding and the positional encoding. This combined vector carries both the token's meaning and its position in the sequence.</p>
+<div class="ct"><span class="ic ig">⊕</span> Step 3: Sum → model input</div>
+<p class="desc">The final input is the element-wise <strong>sum</strong> of token embedding + positional encoding. One vector carries both meaning and position.</p>
 <div id="embed-final"></div>
-<div class="co coo"><span class="ci">💡</span><div><strong>Key insight:</strong> The embedding and PE live in the same vector space (d_model). Adding them lets the model use both meaning and position simultaneously. Later work (like RoPE in LLaMA) explored multiplicative alternatives.</div></div>
 </div>
 </div>
 
-<!-- ═══════ SELF-ATTENTION ═══════ -->
+<!-- ═══════ NEW: INTUITION ═══════ -->
+<div id="s-intuition" class="sec">
+<div class="sh"><h2><span class="num">03</span>The Intuition Behind Self-Attention</h2><p>Before we see the math, let's understand <em>why</em> self-attention works. The core idea: every word should be able to "look at" every other word to understand context.</p></div>
+
+<div class="cd">
+<div class="ct"><span class="ic io">◉</span> The problem self-attention solves</div>
+<p class="desc">Consider this sentence:</p>
+<div style="font-size:1.15rem;font-weight:500;padding:0.8rem 0;text-align:center;letter-spacing:-0.01em;">
+"The <span style="color:var(--acc);font-weight:700;text-decoration:underline;">animal</span> didn't cross the street because <span style="color:var(--blue);font-weight:700;text-decoration:underline;">it</span> was too <span style="color:var(--green);font-weight:700;text-decoration:underline;">tired</span>."
+</div>
+<p class="desc">What does <strong>"it"</strong> refer to? A human instantly knows it's the <strong>animal</strong> (not the street). But a model processing words one-by-one (like an RNN) may lose this connection over the intervening tokens. Self-attention solves this by letting <em>every</em> word directly examine <em>every other</em> word.</p>
+<div class="sb s-rose"><div class="sl">Key insight</div>Self-attention computes a <strong>relevance score</strong> between every pair of words, then uses those scores to create context-aware representations. The word "it" can directly attend to "animal" regardless of distance.</div>
+</div>
+
+<div class="cd">
+<div class="ct"><span class="ic ib">⊞</span> The library analogy for Q, K, V</div>
+<p class="desc">The Query/Key/Value mechanism is like a <strong>library search system</strong>:</p>
+<div class="g3">
+<div class="analogy s-rose" style="grid-template-columns:1fr;">
+<div>
+<div style="font-size:1.4rem;margin-bottom:0.3rem;">🔍</div>
+<strong style="color:var(--acc);">Query (Q)</strong> — "What am I looking for?"<br>
+<span style="font-size:0.82rem;color:var(--txt2);">You walk into a library with a question in mind. Each word creates a query vector representing what information it needs from context.</span>
+</div>
+</div>
+<div class="analogy s-blue" style="grid-template-columns:1fr;">
+<div>
+<div style="font-size:1.4rem;margin-bottom:0.3rem;">🏷️</div>
+<strong style="color:var(--blue);">Key (K)</strong> — "What do I contain?"<br>
+<span style="font-size:0.82rem;color:var(--txt2);">Each book has a label describing its contents. Each word creates a key vector advertising what information it offers.</span>
+</div>
+</div>
+<div class="analogy s-green" style="grid-template-columns:1fr;">
+<div>
+<div style="font-size:1.4rem;margin-bottom:0.3rem;">📖</div>
+<strong style="color:var(--green);">Value (V)</strong> — "Here's my actual content."<br>
+<span style="font-size:0.82rem;color:var(--txt2);">Once you find the right book (Q·K match), you read its content. Each word provides a value vector — the actual information to extract.</span>
+</div>
+</div>
+</div>
+<p class="desc" style="margin-top:0.7rem;">The process: (1) Compare your query against all keys → get relevance scores. (2) Turn scores into probabilities (softmax). (3) Read a weighted mix of all values. The output is a <strong>context-enriched</strong> version of each word.</p>
+</div>
+
+<div class="cd">
+<div class="ct"><span class="ic ig">◈</span> Interactive: sentence-level attention</div>
+<p class="desc">Click any word below to see which other words it attends to most. Brighter = stronger attention. This simulates how self-attention lets each word gather context from the full sentence.</p>
+<div class="igrp"><label>Sentence</label>
+<input type="text" id="sent-input" value="The cat sat on the mat because it was tired" onchange="buildSentAttn()">
+</div>
+<div id="sent-tokens" style="text-align:center;padding:0.5rem 0;"></div>
+<div class="viz-wrap">
+<div class="viz-label">Attention weights — click a word above, then see where it attends</div>
+<div id="sent-heatmap" style="overflow-x:auto;"></div>
+</div>
+<div class="sb s-amber"><div class="sl">Note</div>These weights are synthetic illustrations using positional + lexical similarity heuristics, not from a trained model. In a real Transformer, attention patterns are learned from data and vary by head.</div>
+</div>
+
+<div class="cd">
+<div class="ct"><span class="ic ia">△</span> Before vs. after self-attention</div>
+<p class="desc">Self-attention transforms <strong>isolated</strong> word vectors into <strong>contextualized</strong> representations. The word "bank" means something different in "river bank" vs. "bank account" — self-attention resolves this by mixing in context.</p>
+<div class="g2">
+<div class="sb s-blue"><div class="sl">Before (input embeddings)</div>Each word is an <strong>independent</strong> vector based only on the word itself. "bank" has the same representation regardless of context. No interaction between words.</div>
+<div class="sb s-green"><div class="sl">After (self-attention output)</div>Each word is now a <strong>weighted mixture</strong> of all words. "bank" near "river" absorbs river-related meaning. "bank" near "account" absorbs financial meaning. <strong>Same word, different representation.</strong></div>
+</div>
+</div>
+</div>
+
+<!-- ═══════ SELF-ATTENTION (MATH) ═══════ -->
 <div id="s-attention" class="sec">
-<div class="sh"><h2>Scaled Dot-Product Attention</h2><p>The core mechanism of the Transformer. Each token creates a <strong>Query</strong> (what am I looking for?), a <strong>Key</strong> (what do I contain?), and a <strong>Value</strong> (what do I provide?). Attention weights are computed from Q·K similarity, then used to weight V.</p></div>
+<div class="sh"><h2><span class="num">04</span>Scaled Dot-Product Attention</h2><p>Now the math. Each token creates a Query, Key, and Value vector. Attention weights come from Q·K similarity, scaled by √d_k, then softmaxed to produce weights over V.</p></div>
 
 <div class="cd">
-<div class="ct"><span class="ic io">📐</span> The Attention Formula (Equation 1 in the paper)</div>
-<div class="fb" style="font-size:0.9rem;text-align:center;">Attention(Q, K, V) = softmax( <span class="hl">QK<sup>T</sup></span> / √<span class="hl">d_k</span> ) · <span class="kw">V</span></div>
-<p class="desc" style="margin-top:0.5rem;">This formula has 4 steps: (1) compute similarity scores via QK<sup>T</sup>, (2) scale by √d_k to prevent softmax saturation, (3) apply softmax to get attention weights (probabilities that sum to 1), (4) multiply by V to get the output.</p>
+<div class="ct"><span class="ic io">≡</span> The attention formula (Equation 1)</div>
+<div class="fb" style="font-size:0.95rem;text-align:center;padding:1rem;">Attention(Q, K, V) = softmax( <span class="hl">QK<sup>T</sup></span> / √<span class="hl">d_k</span> ) · <span class="gn">V</span></div>
+<p class="desc" style="margin-top:0.5rem;">Four steps: (1) <strong>Score</strong> — compute QK<sup>T</sup> to measure similarity between each pair of tokens. (2) <strong>Scale</strong> — divide by √d_k to prevent softmax saturation. (3) <strong>Normalize</strong> — softmax turns scores into probabilities (rows sum to 1). (4) <strong>Aggregate</strong> — weighted sum of V vectors.</p>
 </div>
 
 <div class="cd">
-<div class="ct"><span class="ic ib">🔢</span> Interactive: Step-by-Step Attention Calculation</div>
-<p class="desc">We use a tiny 3-token, 4-dimensional example so you can see every number. The tokens are projected to Q, K, V through learned weight matrices W<sup>Q</sup>, W<sup>K</sup>, W<sup>V</sup>. Click through each step:</p>
+<div class="ct"><span class="ic ib">▥</span> Interactive: step-by-step calculation</div>
+<p class="desc">A tiny 3-token, 4-dimensional example showing every number. Tokens are projected to Q, K, V through learned weight matrices. Click each step:</p>
 <div class="pill-row" id="attn-pills"></div>
 <div id="attn-content"></div>
 </div>
 
 <div class="cd">
-<div class="ct"><span class="ic ig">🌡️</span> Temperature & Scaling — Why divide by √d_k?</div>
-<p class="desc">When d_k is large, the dot products grow large in magnitude, pushing the softmax into regions where it has extremely small gradients. Dividing by √d_k keeps the variance of the dot products at ≈1, regardless of dimension.</p>
+<div class="ct"><span class="ic ig">⊘</span> Why divide by √d_k?</div>
+<p class="desc">When d_k is large, dot products grow in magnitude, pushing softmax into near-zero gradient regions. Scaling by √d_k keeps variance ≈ 1 regardless of dimension.</p>
 <div class="cr">
 <div class="igrp"><label>d_k value</label><input type="number" id="temp-dk" value="64" min="1" max="512" onchange="drawTemp()"></div>
 </div>
 <div class="g2">
-<div class="viz-wrap"><div class="viz-label">Softmax WITHOUT scaling</div><canvas id="temp-no" height="160"></canvas></div>
-<div class="viz-wrap"><div class="viz-label">Softmax WITH √d_k scaling</div><canvas id="temp-yes" height="160"></canvas></div>
+<div class="viz-wrap"><div class="viz-label">WITHOUT scaling (softmax saturates)</div><canvas id="temp-no" height="160"></canvas></div>
+<div class="viz-wrap"><div class="viz-label">WITH √d_k scaling (gradients flow)</div><canvas id="temp-yes" height="160"></canvas></div>
 </div>
-<div class="fb"><span class="cm">// Section 3.2.1:</span><br>"We suspect that for large values of d_k, the dot products grow<br>large in magnitude, pushing the softmax function into regions<br>where it has <span class="hl">extremely small gradients</span>."</div>
+<div class="sb s-rose"><div class="sl">The gradient problem</div>When softmax outputs approach 0 or 1, its gradient vanishes — the model can't learn. Scaling prevents this by keeping scores in a moderate range where softmax is sensitive to input changes.</div>
 </div>
 </div>
 
-<!-- ═══════ MULTI-HEAD ATTENTION ═══════ -->
+<!-- ═══════ MULTI-HEAD ═══════ -->
 <div id="s-multihead" class="sec">
-<div class="sh"><h2>Multi-Head Attention</h2><p>Instead of one big attention function, the paper splits Q, K, V into <strong>h parallel heads</strong>, each attending to different representation subspaces. The outputs are concatenated and projected back.</p></div>
+<div class="sh"><h2><span class="num">05</span>Multi-Head Attention</h2><p>Instead of one attention function, the model runs <strong>h parallel attention heads</strong>, each looking at different aspects of the relationships between tokens.</p></div>
 
 <div class="cd">
-<div class="ct"><span class="ic io">🔀</span> The Multi-Head Formula (Equation 2-3)</div>
-<div class="fb"><span class="kw">MultiHead</span>(Q, K, V) = Concat(head₁, ..., headₕ) · <span class="hl">W<sup>O</sup></span><br><br>where head_i = Attention(Q · <span class="hl">W<sub>i</sub><sup>Q</sup></span>, K · <span class="hl">W<sub>i</sub><sup>K</sup></span>, V · <span class="hl">W<sub>i</sub><sup>V</sup></span>)<br><br><span class="cm">// h = 8 heads, d_k = d_v = d_model/h = 512/8 = 64</span></div>
+<div class="ct"><span class="ic io">⧉</span> The formula (Equations 2–3)</div>
+<div class="fb"><span class="kw">MultiHead</span>(Q, K, V) = Concat(head₁, ..., headₕ) · <span class="hl">W<sup>O</sup></span><br><br>where head_i = Attention(Q·<span class="hl">Wᵢ<sup>Q</sup></span>, K·<span class="hl">Wᵢ<sup>K</sup></span>, V·<span class="hl">Wᵢ<sup>V</sup></span>)<br><br><span class="cm">// h=8 heads, d_k = d_v = d_model/h = 512/8 = 64</span></div>
 </div>
 
 <div class="cd">
-<div class="ct"><span class="ic ib">👁️</span> Interactive: Visualize How Heads Split</div>
-<p class="desc">Each head sees a different "slice" of the embedding dimensions. With 8 heads and d_model=512, each head gets d_k=64 dimensions. This lets different heads learn different types of relationships (syntax, semantics, position, etc.).</p>
+<div class="ct"><span class="ic ib">▤</span> How heads split the embedding</div>
+<p class="desc">Each head gets a different "slice" of dimensions. With 8 heads and d_model=512, each head works with d_k=64 dimensions — learning different relationship types in parallel.</p>
 <div class="cr">
 <div class="igrp"><label>d_model</label><input type="number" id="mh-dmodel" value="512" min="32" max="1024" step="32" onchange="drawMH()"></div>
-<div class="igrp"><label>Number of Heads (h)</label><input type="number" id="mh-heads" value="8" min="1" max="16" onchange="drawMH()"></div>
+<div class="igrp"><label>Heads (h)</label><input type="number" id="mh-heads" value="8" min="1" max="16" onchange="drawMH()"></div>
 </div>
 <div id="mh-dims"></div>
-<div class="viz-wrap"><div class="viz-label">Head Allocation — each color = one head's subspace</div><canvas id="mh-canvas" height="100"></canvas></div>
+<div class="viz-wrap"><div class="viz-label">Head allocation — each color = one head's subspace</div><canvas id="mh-canvas" height="100"></canvas></div>
 </div>
 
 <div class="cd">
-<div class="ct"><span class="ic ig">🧠</span> What Different Heads Learn</div>
-<p class="desc">Research on trained Transformers shows heads specializing in different linguistic patterns:</p>
+<div class="ct"><span class="ic ig">◉</span> What different heads learn</div>
+<p class="desc">Research shows heads specialize in different linguistic patterns:</p>
 <div class="g3">
-<div class="sb"><div class="sl">Head A — Positional</div>Attends to adjacent tokens. Captures <strong>local syntax</strong> (e.g., adjective → noun).</div>
-<div class="bb"><div class="bl">Head B — Semantic</div>Attends to semantically related tokens across the sentence, even far apart.</div>
-<div class="pb"><div class="pl">Head C — Separator</div>Attends to punctuation / special tokens. Tracks <strong>sentence boundaries</strong>.</div>
+<div class="sb s-rose"><div class="sl">Head A — positional</div>Attends to adjacent tokens. Captures local syntax: adjective → noun, determiner → noun.</div>
+<div class="sb s-blue"><div class="sl">Head B — semantic</div>Attends to semantically related tokens across the sentence, even far apart.</div>
+<div class="sb s-purple"><div class="sl">Head C — structural</div>Attends to punctuation and special tokens. Tracks sentence boundaries and clause structure.</div>
 </div>
-<div id="mh-attn-viz"></div>
-<div class="co cob"><span class="ci">📐</span><div><strong>Computational cost:</strong> Multi-head attention with h heads of d_k dimensions has the same total cost as single-head attention with d_model dimensions, because h × d_k = d_model. You get diversity of attention patterns for free.</div></div>
+<div class="sb s-teal"><div class="sl">Cost</div>Multi-head with h heads of d_k dimensions costs the same as single-head with d_model dimensions, because h × d_k = d_model. Diversity of attention patterns is free.</div>
 </div>
 </div>
 
 <!-- ═══════ ENCODER ═══════ -->
 <div id="s-encoder" class="sec">
-<div class="sh"><h2>The Encoder Block</h2><p>Each encoder layer has two sub-layers: (1) multi-head self-attention and (2) a position-wise feed-forward network. Both use <strong>residual connections</strong> and <strong>layer normalization</strong>.</p></div>
+<div class="sh"><h2><span class="num">06</span>The Encoder Block</h2><p>Each encoder layer has two sub-layers: (1) multi-head self-attention and (2) a position-wise feed-forward network. Both use <strong>residual connections</strong> and <strong>layer normalization</strong>.</p></div>
 
 <div class="cd">
-<div class="ct"><span class="ic io">🔄</span> Residual Connection + LayerNorm</div>
-<p class="desc">Every sub-layer is wrapped with: <span class="ilc">LayerNorm(x + SubLayer(x))</span>. The residual connection (adding x back) allows gradients to flow directly through the network, solving the vanishing gradient problem. LayerNorm stabilizes training.</p>
-<div class="fb"><span class="cm">// Section 3.1: "We employ a residual connection around each of</span><br><span class="cm">// the two sub-layers, followed by layer normalization."</span><br><br>output = <span class="kw">LayerNorm</span>( x + <span class="hl">SubLayer</span>(x) )<br><br><span class="cm">// LayerNorm normalizes across the feature dimension:</span><br>LayerNorm(x) = γ · (x − μ) / (σ + ε) + β<br><span class="cm">// where μ, σ are computed per-token across d_model dimensions</span></div>
-<div id="residual-viz"></div>
+<div class="ct"><span class="ic io">↻</span> Residual connection + LayerNorm</div>
+<p class="desc">Every sub-layer is wrapped with: <span class="ilc">LayerNorm(x + SubLayer(x))</span>. The residual path lets gradients flow directly through deep networks. LayerNorm stabilizes training.</p>
+<div class="fb">output = <span class="kw">LayerNorm</span>( x + <span class="hl">SubLayer</span>(x) )<br><br><span class="cm">// LayerNorm normalizes across the d_model dimension:</span><br>LayerNorm(x) = γ · (x − μ) / (σ + ε) + β</div>
 </div>
 
 <div class="cd">
-<div class="ct"><span class="ic ig">🧮</span> Position-wise Feed-Forward Network</div>
-<p class="desc">Applied identically to each position (token) independently. It's essentially two linear transformations with a ReLU in between. The inner dimension d_ff = 2048 is 4× the model dimension.</p>
-<div class="fb"><span class="kw">FFN</span>(x) = max(0, x · W₁ + b₁) · W₂ + b₂<br><br><span class="cm">// W₁: d_model × d_ff = 512 × 2048 (expand)</span><br><span class="cm">// W₂: d_ff × d_model = 2048 × 512 (contract)</span><br><span class="cm">// This is like two 1×1 convolutions with kernel size 1</span></div>
+<div class="ct"><span class="ic ig">▦</span> Position-wise feed-forward network</div>
+<p class="desc">Two linear layers with ReLU, applied to each token independently. The inner dimension d_ff=2048 is 4× the model dimension — think of it as "thinking in a higher-dimensional space."</p>
+<div class="fb"><span class="kw">FFN</span>(x) = max(0, x·W₁ + b₁) · W₂ + b₂<br><br><span class="cm">// W₁: 512 × 2048 (expand) → ReLU → W₂: 2048 × 512 (contract)</span></div>
 <div class="cr">
 <div class="igrp"><label>d_model</label><input type="number" id="ffn-dm" value="512" min="32" max="1024" step="32" onchange="drawFFN()"></div>
-<div class="igrp"><label>d_ff (inner)</label><input type="number" id="ffn-dff" value="2048" min="64" max="4096" step="64" onchange="drawFFN()"></div>
+<div class="igrp"><label>d_ff</label><input type="number" id="ffn-dff" value="2048" min="64" max="4096" step="64" onchange="drawFFN()"></div>
 </div>
-<div class="viz-wrap"><div class="viz-label">FFN Shape — expand then contract</div><canvas id="ffn-canvas" height="140"></canvas></div>
-<div class="co coo"><span class="ci">💡</span><div><strong>Why expand-then-contract?</strong> The inner layer (d_ff=2048) acts as a larger representational space where the model can compute complex non-linear transformations. Think of it as the model "thinking" in a higher-dimensional space before compressing back.</div></div>
+<div class="viz-wrap"><div class="viz-label">FFN shape — expand then contract</div><canvas id="ffn-canvas" height="140"></canvas></div>
 </div>
 
 <div class="cd">
-<div class="ct"><span class="ic ib">📊</span> Interactive: Full Encoder Data Flow</div>
-<p class="desc">Trace a sequence of 4 tokens through one complete encoder layer. Each token starts as a d_model vector and ends as a transformed d_model vector, enriched with contextual information from all other tokens.</p>
+<div class="ct"><span class="ic ib">→</span> Full encoder data flow</div>
+<p class="desc">Trace tokens through one complete encoder layer:</p>
 <div class="viz-wrap"><canvas id="enc-flow" height="260"></canvas></div>
 <div id="enc-params"></div>
 </div>
@@ -276,85 +406,67 @@ For any fixed offset <em>k</em>, PE(pos+k) can be represented as a linear functi
 
 <!-- ═══════ DECODER ═══════ -->
 <div id="s-decoder" class="sec">
-<div class="sh"><h2>The Decoder & Masking</h2><p>The decoder is similar to the encoder but with two key differences: (1) <strong>masked self-attention</strong> prevents attending to future tokens, and (2) <strong>cross-attention</strong> lets the decoder attend to the encoder's output.</p></div>
+<div class="sh"><h2><span class="num">07</span>The Decoder & Masking</h2><p>The decoder adds two things: (1) <strong>masked self-attention</strong> that prevents looking at future tokens, and (2) <strong>cross-attention</strong> that reads the encoder's output.</p></div>
 
 <div class="cd">
-<div class="ct"><span class="ic ir">🎭</span> Masked Self-Attention — Preventing Future Leakage</div>
-<p class="desc">During training, the decoder sees the entire target sequence at once for parallel processing. But each position should only attend to earlier positions (auto-regressive property). The mask sets future positions to -∞ before softmax, giving them zero attention weight.</p>
-<div class="fb"><span class="cm">// Section 3.2.3.1:</span><br><span class="cm">// "We need to prevent leftward information flow in the decoder</span><br><span class="cm">// to preserve the auto-regressive property."</span><br><br>Masked_Attention = softmax( QK<sup>T</sup>/√d_k + <span class="hl">Mask</span> ) · V<br><br><span class="cm">// Mask[i][j] = 0 if j ≤ i (allowed), −∞ if j > i (blocked)</span></div>
-<div class="igrp"><label>Sequence Length</label><input type="number" id="mask-len" value="5" min="3" max="8" onchange="drawMask()"></div>
+<div class="ct"><span class="ic io">◧</span> Masked self-attention — preventing future leakage</div>
+<p class="desc">During training, the decoder sees the full target at once (for parallelism). The mask sets future positions to −∞ before softmax, giving them zero weight.</p>
+<div class="fb">Masked_Attention = softmax( QK<sup>T</sup>/√d_k + <span class="hl">Mask</span> ) · V<br><br><span class="cm">// Mask[i][j] = 0 if j ≤ i (allowed), −∞ if j > i (blocked)</span></div>
+<div class="igrp"><label>Sequence length</label><input type="number" id="mask-len" value="5" min="3" max="8" onchange="drawMask()"></div>
 <div class="g2">
-<div>
-<div class="viz-label">Attention Mask</div>
-<div id="mask-grid"></div>
+<div><div class="viz-label">Attention mask</div><div id="mask-grid"></div></div>
+<div><div class="viz-label">After softmax (rows sum to 1)</div><div id="mask-softmax"></div></div>
 </div>
-<div>
-<div class="viz-label">After Softmax (rows sum to 1)</div>
-<div id="mask-softmax"></div>
-</div>
-</div>
-<div class="co coo"><span class="ci">💡</span><div><strong>Why −∞ and not 0?</strong> We need the softmax output to be exactly zero for future positions. Since softmax(−∞) = 0, setting masked positions to −∞ guarantees zero attention weight, regardless of the actual QK<sup>T</sup> values.</div></div>
+<div class="sb s-rose"><div class="sl">Why −∞ and not 0?</div>softmax(−∞) = 0 exactly. This guarantees zero attention weight for future positions regardless of the QK<sup>T</sup> scores.</div>
 </div>
 
 <div class="cd">
-<div class="ct"><span class="ic it">🔗</span> Cross-Attention — Encoder ↔ Decoder Bridge</div>
-<p class="desc">The decoder's second attention layer uses <strong>K and V from the encoder</strong> but <strong>Q from the decoder</strong>. This is how the decoder "reads" the source input. The decoder asks "what parts of the input are relevant to what I'm generating now?"</p>
-<div class="fb"><span class="cm">// Cross-attention (Section 3.2.3):</span><br><span class="kw">Q</span> = decoder hidden states × W<sup>Q</sup>  <span class="cm">// "what am I looking for?"</span><br><span class="hl">K</span> = <span class="hl">encoder output</span> × W<sup>K</sup>       <span class="cm">// "what does the source contain?"</span><br><span class="hl">V</span> = <span class="hl">encoder output</span> × W<sup>V</sup>       <span class="cm">// "what information to extract?"</span><br><br><span class="cm">// This allows every position in the decoder to attend over</span><br><span class="cm">// all positions in the input sequence.</span></div>
+<div class="ct"><span class="ic it">⇋</span> Cross-attention — the encoder-decoder bridge</div>
+<p class="desc">The decoder's second attention uses <strong>K, V from the encoder</strong> but <strong>Q from the decoder</strong>. The decoder asks: "what parts of the input are relevant to what I'm generating now?"</p>
+<div class="fb"><span class="kw">Q</span> = decoder states × W<sup>Q</sup>  <span class="cm">// "what am I looking for?"</span><br><span class="hl">K</span> = <span class="hl">encoder output</span> × W<sup>K</sup>  <span class="cm">// "what does the source contain?"</span><br><span class="gn">V</span> = <span class="gn">encoder output</span> × W<sup>V</sup>  <span class="cm">// "what to extract?"</span></div>
 <div class="viz-wrap"><canvas id="cross-canvas" height="200"></canvas></div>
 </div>
 
 <div class="cd">
-<div class="ct"><span class="ic ib">📊</span> Full Decoder Block Comparison</div>
-<div class="g2">
-<div class="sb"><div class="sl">Encoder Self-Attention</div>Q, K, V all come from the <strong>same source</strong> (encoder input). Every token attends to every other token — <strong>no masking</strong>.</div>
-<div class="bb"><div class="bl">Decoder Masked Self-Attention</div>Q, K, V from <strong>decoder input</strong>. Token i can only attend to positions 0..i — <strong>future is masked</strong>.</div>
+<div class="ct"><span class="ic ib">⊞</span> Three types of attention compared</div>
+<div class="g3">
+<div class="sb s-rose"><div class="sl">Encoder self-attention</div>Q, K, V all from <strong>encoder input</strong>. Every token attends to every other. <strong>No mask.</strong></div>
+<div class="sb s-blue"><div class="sl">Decoder masked self-attn</div>Q, K, V from <strong>decoder input</strong>. Token i attends only to positions ≤ i. <strong>Causal mask.</strong></div>
+<div class="sb s-teal"><div class="sl">Decoder cross-attention</div>Q from <strong>decoder</strong>, K+V from <strong>encoder</strong>. Decoder reads all encoder positions. <strong>No mask.</strong></div>
 </div>
-<div class="pb"><div class="pl">Decoder Cross-Attention</div>Q from <strong>decoder</strong>, K and V from <strong>encoder output</strong>. Decoder attends to all encoder positions (no masking). This is the information bridge between input and output.</div>
 </div>
 </div>
 
 <!-- ═══════ TRAINING ═══════ -->
 <div id="s-training" class="sec">
-<div class="sh"><h2>Training & Generation</h2><p>The Transformer is trained with <strong>teacher forcing</strong> and generates output <strong>auto-regressively</strong> at inference. The paper used specific optimization choices that became standard practice.</p></div>
+<div class="sh"><h2><span class="num">08</span>Training & Generation</h2><p>Trained with <strong>teacher forcing</strong> (parallel), generates output <strong>auto-regressively</strong> (sequential). The paper's optimization recipe became standard practice.</p></div>
 
 <div class="cd">
-<div class="ct"><span class="ic io">🎓</span> Training: Teacher Forcing</div>
-<p class="desc">During training, the decoder receives the ground-truth target (shifted right by one) as input. The model predicts the next token at each position, and all positions are computed in parallel thanks to masking.</p>
-<div class="fb"><span class="cm">// Training example: translate "I love ML" → "Ich liebe ML"</span><br><br>Encoder input:  [I] [love] [ML]<br>Decoder input:  [&lt;SOS&gt;] [Ich] [liebe] [ML]  <span class="cm">// shifted right</span><br>Decoder target: [Ich] [liebe] [ML] [&lt;EOS&gt;]  <span class="cm">// what we predict</span><br><br><span class="cm">// Loss = cross-entropy between predictions and targets</span><br><span class="cm">// All positions computed in parallel (masked attention</span><br><span class="cm">// prevents cheating by looking at future tokens)</span></div>
+<div class="ct"><span class="ic io">▶</span> Teacher forcing (training)</div>
+<p class="desc">The decoder receives ground-truth target (shifted right) as input. All positions are computed in parallel — masking prevents cheating.</p>
+<div class="fb"><span class="cm">// Translate "I love ML" → "Ich liebe ML"</span><br><br>Encoder input:  [I] [love] [ML]<br>Decoder input:  [&lt;SOS&gt;] [Ich] [liebe] [ML]  <span class="cm">// shifted right</span><br>Decoder target: [Ich] [liebe] [ML] [&lt;EOS&gt;]  <span class="cm">// predict this</span><br><br><span class="cm">// Loss = cross-entropy(predictions, targets)</span></div>
 </div>
 
 <div class="cd">
-<div class="ct"><span class="ic ig">🔮</span> Inference: Auto-Regressive Generation</div>
-<p class="desc">At inference, there's no ground truth. The model generates one token at a time: predict → append → predict next → append → ... until &lt;EOS&gt;.</p>
+<div class="ct"><span class="ic ig">↝</span> Auto-regressive generation (inference)</div>
+<p class="desc">No ground truth available. Generate one token at a time: predict → append → predict next → ... until &lt;EOS&gt;.</p>
 <div class="viz-wrap"><canvas id="gen-canvas" height="180"></canvas></div>
 <div id="gen-steps"></div>
 </div>
 
 <div class="cd">
-<div class="ct"><span class="ic ib">⚙️</span> Optimizer & Learning Rate Schedule</div>
-<p class="desc">The paper used Adam optimizer with a custom learning rate schedule — a warmup phase followed by decay. This became one of the most influential training recipes.</p>
-<div class="fb"><span class="kw">lr</span> = d_model<sup>−0.5</sup> · min(step<sup>−0.5</sup>, step · warmup_steps<sup>−1.5</sup>)<br><br><span class="cm">// warmup_steps = 4000</span><br><span class="cm">// Linearly increases lr for the first warmup_steps,</span><br><span class="cm">// then decreases proportionally to step^(-0.5)</span></div>
-<div class="cr">
-<div class="igrp"><label>Warmup Steps</label><input type="number" id="lr-warmup" value="4000" min="500" max="10000" step="500" onchange="drawLR()"></div>
-</div>
-<div class="viz-wrap"><div class="viz-label">Learning Rate Schedule</div><canvas id="lr-canvas" height="180"></canvas></div>
+<div class="ct"><span class="ic ib">⚙</span> Learning rate schedule</div>
+<div class="fb"><span class="kw">lr</span> = d_model<sup>−0.5</sup> · min(step<sup>−0.5</sup>, step · warmup<sup>−1.5</sup>)<br><span class="cm">// Linear warmup → inverse-sqrt decay</span></div>
+<div class="cr"><div class="igrp"><label>Warmup steps</label><input type="number" id="lr-warmup" value="4000" min="500" max="10000" step="500" onchange="drawLR()"></div></div>
+<div class="viz-wrap"><div class="viz-label">Learning rate schedule</div><canvas id="lr-canvas" height="180"></canvas></div>
 </div>
 
 <div class="cd">
-<div class="ct"><span class="ic ip">📊</span> Model Configurations from the Paper</div>
+<div class="ct"><span class="ic ip">◊</span> Model configurations</div>
 <div class="g2">
-<div>
-<div class="sb"><div class="sl">Transformer (Base)</div>
-<span class="ilc">N=6</span> layers, <span class="ilc">d_model=512</span>, <span class="ilc">d_ff=2048</span>, <span class="ilc">h=8</span> heads, <span class="ilc">d_k=64</span><br>
-Parameters: ~65M · BLEU: 25.8 (EN→DE)</div>
+<div class="sb s-rose"><div class="sl">Transformer (base)</div><span class="ilc">N=6</span> <span class="ilc">d=512</span> <span class="ilc">d_ff=2048</span> <span class="ilc">h=8</span> · ~65M params · BLEU 25.8</div>
+<div class="sb s-blue"><div class="sl">Transformer (big)</div><span class="ilc">N=6</span> <span class="ilc">d=1024</span> <span class="ilc">d_ff=4096</span> <span class="ilc">h=16</span> · ~213M params · BLEU 28.4</div>
 </div>
-<div>
-<div class="bb"><div class="bl">Transformer (Big)</div>
-<span class="ilc">N=6</span> layers, <span class="ilc">d_model=1024</span>, <span class="ilc">d_ff=4096</span>, <span class="ilc">h=16</span> heads, <span class="ilc">d_k=64</span><br>
-Parameters: ~213M · BLEU: 28.4 (EN→DE)</div>
-</div>
-</div>
-<div class="co cob"><span class="ci">🌍</span><div><strong>Impact:</strong> The Transformer architecture became the foundation for BERT, GPT, T5, LLaMA, and virtually all modern LLMs. The key insight — replacing recurrence with attention — unlocked massive parallelism and enabled training on unprecedented data scales.</div></div>
 </div>
 </div>
 
@@ -367,12 +479,16 @@ document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
 document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
 document.getElementById('s-'+id).classList.add('on');el.classList.add('on');
 window.scrollTo({top:0,behavior:'smooth'});
-if(id==='embed')setTimeout(()=>{computeEmbed();drawPE();},50);
-if(id==='attention')setTimeout(()=>{initAttn();drawTemp();},50);
-if(id==='multihead')setTimeout(()=>drawMH(),50);
-if(id==='encoder')setTimeout(()=>{drawFFN();drawEncFlow();},50);
-if(id==='decoder')setTimeout(()=>{drawMask();drawCross();},50);
-if(id==='training')setTimeout(()=>{drawGen();drawLR();},50);
+const init={
+embed:()=>{computeEmbed();drawPE();},
+intuition:()=>buildSentAttn(),
+attention:()=>{initAttn();drawTemp();},
+multihead:()=>drawMH(),
+encoder:()=>{drawFFN();drawEncFlow();},
+decoder:()=>{drawMask();drawCross();},
+training:()=>{drawGen();drawLR();}
+};
+if(init[id])setTimeout(init[id],50);
 }
 
 const dpr=window.devicePixelRatio||1;
@@ -381,16 +497,16 @@ function hiDPI(cv,w,h){cv.width=w*dpr;cv.height=h*dpr;cv.style.width=w+'px';cv.s
 // ═══════ ARCHITECTURE INFO ═══════
 function archInfo(key){
 const info={
-emb:{t:'Input/Output Embedding',c:'Learned lookup table mapping each token to a d_model=512 dimensional vector. Weights are shared between encoder/decoder embeddings and the pre-softmax linear transformation (Section 3.4). Multiplied by √d_model.'},
-pe:{t:'Positional Encoding',c:'Sinusoidal encoding added to embeddings so the model knows token order. Uses sin/cos at different frequencies: PE(pos,2i) = sin(pos/10000^(2i/d_model)). Allows the model to learn relative positions (Section 3.5).'},
-mha:{t:'Multi-Head Self-Attention',c:'Each token attends to all other tokens via Q, K, V projections. With h=8 parallel heads of d_k=64 each, the model captures different types of relationships simultaneously (Section 3.2.2).'},
-masked:{t:'Masked Multi-Head Attention',c:'Same as self-attention but with a causal mask: position i can only attend to positions ≤ i. Future tokens are set to −∞ before softmax, giving them zero weight. Preserves auto-regressive property (Section 3.2.3.1).'},
-cross:{t:'Encoder-Decoder (Cross) Attention',c:'Q comes from the decoder, but K and V come from the encoder output. This is how the decoder "reads" the source input. Every decoder position can attend to all encoder positions (Section 3.2.3).'},
-ffn:{t:'Position-wise Feed-Forward Network',c:'Two linear layers with ReLU: FFN(x) = max(0, xW₁+b₁)W₂+b₂. Applied identically to each position. Inner dimension d_ff=2048 is 4× d_model, acting as a per-token nonlinear transformation (Section 3.3).'},
-linear:{t:'Output Linear + Softmax',c:'Final linear layer projects d_model to vocabulary size, followed by softmax to produce next-token probabilities. Shares weights with the embedding layer (Section 3.4).'}
+emb:{t:'Input/Output Embedding',c:'Learned lookup table: each token → d_model=512 vector. Shared between encoder/decoder embeddings and pre-softmax linear (Section 3.4). Multiplied by √d_model.'},
+pe:{t:'Positional Encoding',c:'Sinusoidal encoding: PE(pos,2i) = sin(pos/10000^(2i/d_model)). Added to embeddings so the model knows word order. Allows learning relative positions (Section 3.5).'},
+mha:{t:'Multi-Head Self-Attention',c:'Each token attends to all others via Q, K, V projections. h=8 parallel heads of d_k=64 each capture different relationship types simultaneously (Section 3.2.2).'},
+masked:{t:'Masked Multi-Head Attention',c:'Same as self-attention but with causal mask: position i attends only to ≤ i. Future = −∞ before softmax → zero weight. Preserves auto-regressive property (Section 3.2.3.1).'},
+cross:{t:'Cross-Attention',c:'Q from decoder, K+V from encoder output. This is how the decoder "reads" the source. Every decoder position attends to all encoder positions (Section 3.2.3).'},
+ffn:{t:'Feed-Forward Network',c:'FFN(x) = max(0, xW₁+b₁)W₂+b₂. Per-token, two linear layers with ReLU. d_ff=2048 = 4× d_model. A per-position nonlinear transformation (Section 3.3).'},
+linear:{t:'Output Linear + Softmax',c:'Projects d_model → vocabulary size, then softmax for next-token probabilities. Weight-tied with embedding layer (Section 3.4).'}
 };
 const d=info[key]||{t:'Unknown',c:''};
-document.getElementById('arch-detail').innerHTML=`<div class="rb"><div class="rl">${d.t}</div>${d.c}</div>`;
+document.getElementById('arch-detail').innerHTML=`<div class="sb s-green"><div class="sl">${d.t}</div>${d.c}</div>`;
 }
 
 // ═══════ EMBEDDINGS ═══════
@@ -401,41 +517,30 @@ return pseudoEmbed[tok];
 }
 
 function computeEmbed(){
-const s=document.getElementById('embed-input').value.trim().toLowerCase();
-if(!s)return;
-const tokens=s.split(/\s+/);
-const dm=4,scale=Math.sqrt(dm);
-let h='<div style="overflow-x:auto;"><table class="mtx" style="margin:0.5rem 0;"><tr><td style="background:var(--g800);color:var(--g200);font-weight:700;">Token</td>';
-for(let d=0;d<dm;d++)h+=`<td style="background:var(--g800);color:var(--g200);">d${d}</td>`;
-h+='</tr>';
+const s=document.getElementById('embed-input').value.trim().toLowerCase();if(!s)return;
+const tokens=s.split(/\s+/),dm=4,scale=Math.sqrt(dm);
+let h='<div style="overflow-x:auto;"><table class="mtx"><tr><td style="background:var(--txt);color:var(--bg);font-weight:600;">Token</td>';
+for(let d=0;d<dm;d++)h+=`<td style="background:var(--txt);color:var(--bg);">d${d}</td>`;h+='</tr>';
 const embeds=[];
-tokens.forEach((tok,i)=>{
-const e=getEmbed(tok);const scaled=e.map(v=>+(v*scale).toFixed(3));
-embeds.push({tok,raw:e,scaled});
-h+=`<tr><td style="background:var(--o50);color:var(--o700);font-weight:600;">"${tok}"</td>`;
-scaled.forEach(v=>h+=`<td>${v}</td>`);h+='</tr>';
+tokens.forEach(tok=>{
+const e=getEmbed(tok),scaled=e.map(v=>+(v*scale).toFixed(3));embeds.push({tok,raw:e,scaled});
+h+=`<tr><td class="hi">"${tok}"</td>`;scaled.forEach(v=>h+=`<td>${v}</td>`);h+='</tr>';
 });
 h+='</table></div>';
-h+=`<div class="ref">Embedding vectors × √${dm} = √${dm} ≈ ${scale.toFixed(3)}</div>`;
+h+=`<div class="ref">Scaled by √${dm} ≈ ${scale.toFixed(3)}</div>`;
 document.getElementById('embed-tokens').innerHTML=h;
 
-// Show final sum
-let fh='<div style="overflow-x:auto;"><table class="mtx" style="margin:0.5rem 0;"><tr><td style="background:var(--g800);color:var(--g200);font-weight:700;">Token</td>';
-for(let d=0;d<dm;d++)fh+=`<td style="background:var(--g800);color:var(--g200);">d${d}</td>`;
-fh+='<td style="background:var(--g800);color:var(--g200);">Sum</td></tr>';
+let fh='<div style="overflow-x:auto;"><table class="mtx"><tr><td style="background:var(--txt);color:var(--bg);font-weight:600;">Token</td>';
+for(let d=0;d<dm;d++)fh+=`<td style="background:var(--txt);color:var(--bg);">d${d}</td>`;fh+='</tr>';
 embeds.forEach((em,pos)=>{
-fh+=`<tr><td style="background:var(--o50);color:var(--o700);font-weight:600;">"${em.tok}" (pos=${pos})</td>`;
-const pe=[];
+fh+=`<tr><td class="hi">"${em.tok}" pos=${pos}</td>`;
 for(let d=0;d<dm;d++){
-const i=Math.floor(d/2);const freq=1/Math.pow(10000,2*i/dm);
-const v=d%2===0?Math.sin(pos*freq):Math.cos(pos*freq);pe.push(+v.toFixed(3));
-const sum=+(em.scaled[d]+v).toFixed(3);
-fh+=`<td class="hi">${em.scaled[d]}<span style="color:var(--p500);">+${v.toFixed(2)}</span><br><strong>${sum}</strong></td>`;
-}
-fh+=`<td style="font-size:0.6rem;color:var(--g400);">emb+PE</td></tr>`;
-});
-fh+='</table></div>';
-document.getElementById('embed-final').innerHTML=fh;
+const i=Math.floor(d/2),freq=1/Math.pow(10000,2*i/dm);
+const pv=d%2===0?Math.sin(pos*freq):Math.cos(pos*freq);
+const sum=+(em.scaled[d]+pv).toFixed(3);
+fh+=`<td class="hi3">${em.scaled[d]} <span style="color:var(--purple);">+${pv.toFixed(2)}</span><br><strong>${sum}</strong></td>`;
+}fh+='</tr>';});
+document.getElementById('embed-final').innerHTML=fh+'</table></div>';
 }
 
 // ═══════ POSITIONAL ENCODING HEATMAP ═══════
@@ -443,239 +548,250 @@ function drawPE(){
 const seqLen=parseInt(document.getElementById('pe-len').value);
 const dm=parseInt(document.getElementById('pe-dim').value);
 const cv=document.getElementById('pe-canvas');if(!cv)return;
-const W=cv.parentElement.clientWidth-20,H=220;
+const W=cv.parentElement.clientWidth-20,H=240;
 const ctx=hiDPI(cv,W,H);ctx.clearRect(0,0,W,H);
-const pad={t:28,r:10,b:28,l:40};
+const pad={t:28,r:10,b:28,l:44};
 const cw=(W-pad.l-pad.r)/dm,ch=(H-pad.t-pad.b)/seqLen;
-
-// Compute PE values
-const pe=[];
-for(let pos=0;pos<seqLen;pos++){
-pe[pos]=[];
-for(let d=0;d<dm;d++){
-const i=Math.floor(d/2);const freq=1/Math.pow(10000,2*i/dm);
-pe[pos][d]=d%2===0?Math.sin(pos*freq):Math.cos(pos*freq);
+for(let pos=0;pos<seqLen;pos++){for(let d=0;d<dm;d++){
+const i=Math.floor(d/2),freq=1/Math.pow(10000,2*i/dm);
+const v=d%2===0?Math.sin(pos*freq):Math.cos(pos*freq);
+const r=v>0?255:Math.round(255+v*200),g=v>0?Math.round(255-v*180):Math.round(255+v*100),b=v>0?Math.round(255-v*255):255;
+ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(pad.l+d*cw,pad.t+pos*ch,cw-0.5,ch-0.5);
 }}
-
-// Draw heatmap
-for(let pos=0;pos<seqLen;pos++){
-for(let d=0;d<dm;d++){
-const v=pe[pos][d];// Range [-1,1]
-const r=v>0?255:Math.round(255+v*200);
-const g=v>0?Math.round(255-v*180):Math.round(255+v*100);
-const b=v>0?Math.round(255-v*255):255;
-ctx.fillStyle=`rgb(${r},${g},${b})`;
-ctx.fillRect(pad.l+d*cw,pad.t+pos*ch,cw-0.5,ch-0.5);
-}}
-
-// Labels
-ctx.fillStyle='var(--g500)';ctx.font='9px JetBrains Mono';ctx.textAlign='center';
+ctx.fillStyle='#78716c';ctx.font='500 9px IBM Plex Mono';ctx.textAlign='center';
 for(let d=0;d<dm;d+=Math.max(1,Math.floor(dm/8)))ctx.fillText(d,pad.l+d*cw+cw/2,pad.t-6);
 ctx.textAlign='right';
 for(let pos=0;pos<seqLen;pos++)ctx.fillText('pos '+pos,pad.l-4,pad.t+pos*ch+ch/2+4);
-
-// Legend
-ctx.font='8px JetBrains Mono';ctx.textAlign='left';
-const lx=pad.l,ly=H-8;
-const lw=(W-pad.l-pad.r);
+const lx=pad.l,ly=H-8,lw=W-pad.l-pad.r;
 for(let i=0;i<lw;i++){const v=-1+2*i/lw;
-const r=v>0?255:Math.round(255+v*200);const g=v>0?Math.round(255-v*180):Math.round(255+v*100);const b=v>0?Math.round(255-v*255):255;
+const r=v>0?255:Math.round(255+v*200),g=v>0?Math.round(255-v*180):Math.round(255+v*100),b=v>0?Math.round(255-v*255):255;
 ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(lx+i,ly,1,8);}
-ctx.fillStyle='var(--g500)';ctx.fillText('-1',lx,ly-2);ctx.textAlign='center';ctx.fillText('0',lx+lw/2,ly-2);ctx.textAlign='right';ctx.fillText('+1',lx+lw,ly-2);
+ctx.fillStyle='#78716c';ctx.font='500 8px IBM Plex Mono';ctx.textAlign='left';ctx.fillText('-1',lx,ly-2);ctx.textAlign='center';ctx.fillText('0',lx+lw/2,ly-2);ctx.textAlign='right';ctx.fillText('+1',lx+lw,ly-2);
+}
 
-document.getElementById('pe-detail').innerHTML=`<div class="rb"><div class="rl">Pattern</div>Low dimensions (left) oscillate rapidly — they encode fine-grained position. High dimensions (right) change slowly — they encode coarse position. Together they create a unique "fingerprint" for each position.</div>`;
+// ═══════ SENTENCE-LEVEL ATTENTION (NEW) ═══════
+let sentAttnWeights=[];
+let sentTokens=[];
+let selectedSentToken=-1;
+
+function buildSentAttn(){
+const s=document.getElementById('sent-input').value.trim();
+sentTokens=s.split(/\s+/);
+const n=sentTokens.length;
+// Synthetic attention: position-based + same-word boost
+sentAttnWeights=[];
+for(let i=0;i<n;i++){
+const row=[];
+for(let j=0;j<n;j++){
+let score=1.0/(1+Math.abs(i-j)*0.5);// position proximity
+if(sentTokens[i].toLowerCase()===sentTokens[j].toLowerCase()&&i!==j)score+=0.6;
+// "it" → nouns heuristic
+const pronouns=['it','its','they','them','he','she','this','that'];
+const nouns=['cat','dog','animal','man','woman','child','car','bird','mat','street'];
+if(pronouns.includes(sentTokens[i].toLowerCase())&&nouns.includes(sentTokens[j].toLowerCase()))score+=1.2;
+if(nouns.includes(sentTokens[i].toLowerCase())&&pronouns.includes(sentTokens[j].toLowerCase()))score+=0.5;
+// Adjective-noun (crude: word before a noun)
+if(j===i+1&&nouns.includes(sentTokens[j].toLowerCase()))score+=0.4;
+row.push(score);
+}
+// Softmax the row
+const mx=Math.max(...row),ex=row.map(v=>Math.exp(v-mx)),sm=ex.reduce((a,b)=>a+b,0);
+sentAttnWeights.push(ex.map(v=>v/sm));
+}
+selectedSentToken=0;
+renderSentTokens();
+renderSentHeatmap();
+}
+
+function renderSentTokens(){
+const el=document.getElementById('sent-tokens');
+el.innerHTML=sentTokens.map((t,i)=>
+`<span class="attn-token${i===selectedSentToken?' sel':''}" onclick="selectSentToken(${i})">${t}</span>`
+).join('');
+}
+
+function selectSentToken(i){
+selectedSentToken=i;renderSentTokens();renderSentHeatmap();
+}
+
+function renderSentHeatmap(){
+const el=document.getElementById('sent-heatmap');
+const n=sentTokens.length;
+if(n===0||sentAttnWeights.length===0)return;
+const weights=sentAttnWeights[selectedSentToken];
+const maxW=Math.max(...weights);
+
+// Bar-style visualization
+let h='<div style="padding:0.5rem;">';
+h+=`<div style="font-size:0.78rem;font-weight:600;margin-bottom:0.5rem;color:var(--acc);">"${sentTokens[selectedSentToken]}" attends to:</div>`;
+const sorted=weights.map((w,i)=>({w,i,tok:sentTokens[i]})).sort((a,b)=>b.w-a.w);
+sorted.forEach(({w,i,tok})=>{
+const pct=(w*100).toFixed(1);
+const barW=Math.round(w/maxW*100);
+const isSelf=i===selectedSentToken;
+const color=isSelf?'var(--purple)':'var(--acc)';
+h+=`<div style="display:flex;align-items:center;gap:8px;margin:3px 0;font-family:'IBM Plex Mono',monospace;font-size:0.74rem;">`;
+h+=`<span style="min-width:70px;text-align:right;color:${isSelf?'var(--purple)':'var(--txt2)'};font-weight:${isSelf?'600':'400'};">${tok}</span>`;
+h+=`<div style="flex:1;height:20px;background:var(--card2);border-radius:4px;overflow:hidden;">`;
+h+=`<div style="width:${barW}%;height:100%;background:${color};opacity:${0.25+w*0.75};border-radius:4px;transition:width .3s;"></div>`;
+h+=`</div>`;
+h+=`<span style="min-width:42px;font-size:0.68rem;color:var(--txtm);">${pct}%</span>`;
+h+=`</div>`;
+});
+
+// Also show as heatmap row
+h+=`<div style="margin-top:1rem;display:flex;gap:3px;flex-wrap:wrap;align-items:end;">`;
+sentTokens.forEach((tok,j)=>{
+const w=weights[j],pct=(w*100).toFixed(1);
+const intensity=Math.round(w/maxW*255);
+const bg=j===selectedSentToken?`rgba(124,58,237,${0.15+w*0.6})`:`rgba(225,29,72,${0.08+w*0.7})`;
+h+=`<div style="text-align:center;flex:1;min-width:40px;">`;
+h+=`<div style="font-size:0.58rem;color:var(--txtm);margin-bottom:2px;">${pct}%</div>`;
+h+=`<div style="background:${bg};padding:0.35rem 0.2rem;border-radius:5px;font-size:0.68rem;font-family:'IBM Plex Mono',monospace;font-weight:500;">${tok}</div>`;
+h+=`</div>`;
+});
+h+=`</div></div>`;
+el.innerHTML=h;
 }
 
 // ═══════ SELF-ATTENTION STEP-BY-STEP ═══════
-const A_X=[[1,0,1,0],[0,1,0,1],[1,1,0,0]]; // 3 tokens, d=4
-const A_WQ=[[1,0],[0,1],[1,0],[0,1]]; // d×d_k (4×2)
+const A_X=[[1,0,1,0],[0,1,0,1],[1,1,0,0]];
+const A_WQ=[[1,0],[0,1],[1,0],[0,1]];
 const A_WK=[[0,1],[1,0],[0,1],[1,0]];
 const A_WV=[[1,1],[0,0],[1,0],[0,1]];
-
-function matMul(A,B){
-const m=A.length,n=B[0].length,p=B.length;
-const C=Array.from({length:m},()=>Array(n).fill(0));
-for(let i=0;i<m;i++)for(let j=0;j<n;j++)for(let k=0;k<p;k++)C[i][j]+=A[i][k]*B[k][j];
-return C;
-}
+function matMul(A,B){const m=A.length,n=B[0].length,p=B.length;const C=Array.from({length:m},()=>Array(n).fill(0));for(let i=0;i<m;i++)for(let j=0;j<n;j++)for(let k=0;k<p;k++)C[i][j]+=A[i][k]*B[k][j];return C;}
 function transpose(A){return A[0].map((_,j)=>A.map(r=>r[j]));}
 function softmaxRow(arr){const mx=Math.max(...arr);const ex=arr.map(v=>Math.exp(v-mx));const s=ex.reduce((a,b)=>a+b,0);return ex.map(v=>v/s);}
-
 function renderMtx(M,label,cls){
 let h=`<div style="display:inline-block;vertical-align:middle;margin:0.3rem;"><div class="mtx-label">${label}</div><table class="mtx">`;
-M.forEach(row=>{h+='<tr>';row.forEach(v=>{h+=`<td class="${cls||''}">${typeof v==='number'?v.toFixed?v.toFixed(2):v:v}</td>`;});h+='</tr>';});
+M.forEach(row=>{h+='<tr>';row.forEach(v=>h+=`<td class="${cls||''}">${typeof v==='number'?(v%1===0?v:v.toFixed(2)):v}</td>`);h+='</tr>';});
 return h+'</table></div>';
 }
 
 function initAttn(){
-const items=[
-{key:'qkv',label:'1. Q, K, V Projection'},
-{key:'qkt',label:'2. QK^T Scores'},
-{key:'scale',label:'3. Scale by √d_k'},
-{key:'softmax',label:'4. Softmax'},
-{key:'output',label:'5. Multiply by V'}
-];
+const items=[{key:'qkv',label:'1. Q, K, V'},{key:'qkt',label:'2. QK\u1D40 scores'},{key:'scale',label:'3. Scale √d_k'},{key:'softmax',label:'4. Softmax'},{key:'output',label:'5. Output'}];
 const cont=document.getElementById('attn-pills');cont.innerHTML='';
-items.forEach((it,i)=>{
-const p=document.createElement('span');p.className='pill'+(i===0?' on':'');p.textContent=it.label;
-p.onclick=()=>{cont.querySelectorAll('.pill').forEach(x=>x.classList.remove('on'));p.classList.add('on');showAttnStep(it.key);};
-cont.appendChild(p);
-});
+items.forEach((it,i)=>{const p=document.createElement('span');p.className='pill'+(i===0?' on':'');p.textContent=it.label;
+p.onclick=()=>{cont.querySelectorAll('.pill').forEach(x=>x.classList.remove('on'));p.classList.add('on');showAttnStep(it.key);};cont.appendChild(p);});
 showAttnStep('qkv');
 }
 
 function showAttnStep(step){
-const Q=matMul(A_X,A_WQ);const K=matMul(A_X,A_WK);const V=matMul(A_X,A_WV);
-const KT=transpose(K);const scores=matMul(Q,KT);
-const dk=Q[0].length;const scaled=scores.map(row=>row.map(v=>v/Math.sqrt(dk)));
-const weights=scaled.map(row=>softmaxRow(row));
-const output=matMul(weights,V);
+const Q=matMul(A_X,A_WQ),K=matMul(A_X,A_WK),V=matMul(A_X,A_WV);
+const KT=transpose(K),scores=matMul(Q,KT);
+const dk=Q[0].length,scaled=scores.map(r=>r.map(v=>v/Math.sqrt(dk)));
+const weights=scaled.map(r=>softmaxRow(r)),output=matMul(weights,V);
 const el=document.getElementById('attn-content');let h='';
-const labels=['token₀','token₁','token₂'];
+const labels=['tok₀','tok₁','tok₂'];
 
 if(step==='qkv'){
-h+=`<p class="desc" style="margin:0.5rem 0;">Multiply the input X by weight matrices W<sup>Q</sup>, W<sup>K</sup>, W<sup>V</sup> to get Query, Key, Value matrices:</p>`;
+h+=`<p class="desc">Multiply input X by weight matrices to get Query, Key, Value:</p>`;
 h+='<div style="overflow-x:auto;text-align:center;">';
-h+=renderMtx(A_X,'X (3×4)','');h+='<span class="eq">×</span>';h+=renderMtx(A_WQ,'W^Q (4×2)','');h+='<span class="eq">=</span>';h+=renderMtx(Q,'Q (3×2)','hi');
-h+='</div><br><div style="overflow-x:auto;text-align:center;">';
-h+=renderMtx(A_X,'X (3×4)','');h+='<span class="eq">×</span>';h+=renderMtx(A_WK,'W^K (4×2)','');h+='<span class="eq">=</span>';h+=renderMtx(K,'K (3×2)','hi2');
-h+='</div><br><div style="overflow-x:auto;text-align:center;">';
-h+=renderMtx(A_X,'X (3×4)','');h+='<span class="eq">×</span>';h+=renderMtx(A_WV,'W^V (4×2)','');h+='<span class="eq">=</span>';h+=renderMtx(V,'V (3×2)','hi3');
+h+=renderMtx(A_X,'X (3×4)','');h+='<span class="eq">×</span>';h+=renderMtx(A_WQ,'W<sup>Q</sup>','');h+='<span class="eq">=</span>';h+=renderMtx(Q,'Q','hi');
+h+='</div><div style="overflow-x:auto;text-align:center;margin-top:0.3rem;">';
+h+=renderMtx(A_X,'X','');h+='<span class="eq">×</span>';h+=renderMtx(A_WK,'W<sup>K</sup>','');h+='<span class="eq">=</span>';h+=renderMtx(K,'K','hi2');
+h+='</div><div style="overflow-x:auto;text-align:center;margin-top:0.3rem;">';
+h+=renderMtx(A_X,'X','');h+='<span class="eq">×</span>';h+=renderMtx(A_WV,'W<sup>V</sup>','');h+='<span class="eq">=</span>';h+=renderMtx(V,'V','hi3');
 h+='</div>';
-h+=`<div class="sb"><div class="sl">Interpretation</div><strong>Q (Query):</strong> "What am I looking for?" — each token's search vector.<br><strong>K (Key):</strong> "What do I contain?" — each token's label for matching.<br><strong>V (Value):</strong> "What information do I provide?" — each token's content.</div>`;
+h+=`<div class="sb s-rose"><div class="sl">Intuition</div><strong style="color:var(--acc);">Q</strong> = "what am I looking for?" &nbsp; <strong style="color:var(--blue);">K</strong> = "what do I contain?" &nbsp; <strong style="color:var(--green);">V</strong> = "what info do I provide?"</div>`;
 }
 else if(step==='qkt'){
-h+=`<p class="desc" style="margin:0.5rem 0;">Multiply Q by K<sup>T</sup> to get raw attention scores. Each cell (i,j) measures how much token i should attend to token j:</p>`;
+h+=`<p class="desc">Q × K<sup>T</sup> → raw similarity scores. Cell (i,j) = how much token i attends to token j:</p>`;
 h+='<div style="overflow-x:auto;text-align:center;">';
-h+=renderMtx(Q,'Q (3×2)','hi');h+='<span class="eq">×</span>';h+=renderMtx(KT,'K^T (2×3)','hi2');h+='<span class="eq">=</span>';h+=renderMtx(scores,'QK^T (3×3)','hi4');
+h+=renderMtx(Q,'Q','hi');h+='<span class="eq">×</span>';h+=renderMtx(KT,'K<sup>T</sup>','hi2');h+='<span class="eq">=</span>';h+=renderMtx(scores,'QK<sup>T</sup>','hi4');
 h+='</div>';
-h+=`<div class="sb"><div class="sl">Reading the scores matrix</div>Row i = token i's attention to all tokens. Higher values → stronger attention. E.g., score[0][2]=${scores[0][2].toFixed(1)} means token₀ has score ${scores[0][2].toFixed(1)} for attending to token₂.</div>`;
+h+=`<div class="sb s-blue"><div class="sl">Reading the matrix</div>Row i = token i's attention to all tokens. score[0][2]=${scores[0][2]} means tok₀ has score ${scores[0][2]} for attending to tok₂.</div>`;
 }
 else if(step==='scale'){
-h+=`<p class="desc" style="margin:0.5rem 0;">Divide by √d_k = √${dk} ≈ ${Math.sqrt(dk).toFixed(3)} to prevent softmax saturation:</p>`;
+h+=`<p class="desc">Divide by √d_k = √${dk} ≈ ${Math.sqrt(dk).toFixed(3)} to stabilize gradients:</p>`;
 h+='<div style="overflow-x:auto;text-align:center;">';
-h+=renderMtx(scores,'QK^T','hi4');h+=`<span class="eq">÷ √${dk}</span>`;h+=renderMtx(scaled.map(r=>r.map(v=>+v.toFixed(3))),'Scaled','hi');
+h+=renderMtx(scores,'QK<sup>T</sup>','hi4');h+=`<span class="eq">÷ √${dk}</span>`;h+=renderMtx(scaled.map(r=>r.map(v=>+v.toFixed(3))),'Scaled','hi');
 h+='</div>';
-h+=`<div class="fb"><span class="cm">// Without scaling: large d_k → large dot products → softmax becomes very peaky</span><br><span class="cm">// With scaling: variance stays ≈ 1, softmax has useful gradients</span></div>`;
 }
 else if(step==='softmax'){
-h+=`<p class="desc" style="margin:0.5rem 0;">Apply softmax row-wise to convert scores to probabilities (each row sums to 1):</p>`;
+h+=`<p class="desc">Softmax row-wise → probabilities (each row sums to 1):</p>`;
 h+='<div style="overflow-x:auto;text-align:center;">';
 h+=renderMtx(scaled.map(r=>r.map(v=>+v.toFixed(3))),'Scaled','hi');h+='<span class="eq">→ softmax →</span>';
-h+=renderMtx(weights.map(r=>r.map(v=>+v.toFixed(3))),'Attention Weights','hi3');
+h+=renderMtx(weights.map(r=>r.map(v=>+v.toFixed(3))),'Weights','hi3');
 h+='</div>';
-h+=`<div class="rb"><div class="rl">Reading Attention Weights</div>`;
-weights.forEach((row,i)=>{const maxJ=row.indexOf(Math.max(...row));
-h+=`<strong>${labels[i]}</strong> attends most to <strong>${labels[maxJ]}</strong> (${(row[maxJ]*100).toFixed(1)}%)<br>`;});
-h+=`</div>`;
+h+='<div class="sb s-green"><div class="sl">Reading attention weights</div>';
+weights.forEach((row,i)=>{const mx=row.indexOf(Math.max(...row));
+h+=`<strong>${labels[i]}</strong> → <strong>${labels[mx]}</strong> (${(row[mx]*100).toFixed(1)}%)<br>`;});
+h+='</div>';
 }
 else if(step==='output'){
-h+=`<p class="desc" style="margin:0.5rem 0;">Multiply attention weights by V. Each output row is a weighted combination of all Value vectors:</p>`;
+h+=`<p class="desc">Weights × V = context-aware output. Each token is now a weighted mixture of all values:</p>`;
 h+='<div style="overflow-x:auto;text-align:center;">';
-h+=renderMtx(weights.map(r=>r.map(v=>+v.toFixed(3))),'Weights (3×3)','hi3');h+='<span class="eq">×</span>';
-h+=renderMtx(V,'V (3×2)','hi2');h+='<span class="eq">=</span>';
-h+=renderMtx(output.map(r=>r.map(v=>+v.toFixed(3))),'Output (3×2)','hi');
+h+=renderMtx(weights.map(r=>r.map(v=>+v.toFixed(3))),'Weights','hi3');h+='<span class="eq">×</span>';
+h+=renderMtx(V,'V','hi2');h+='<span class="eq">=</span>';
+h+=renderMtx(output.map(r=>r.map(v=>+v.toFixed(3))),'Output','hi');
 h+='</div>';
-h+=`<div class="rb"><div class="rl">Result</div>Each token's output is now a <strong>context-aware</strong> representation — a weighted mixture of all tokens' values, where the weights were determined by query-key similarity. This is the power of self-attention.</div>`;
+h+=`<div class="sb s-green"><div class="sl">Result</div>Each token's output is a <strong>context-aware</strong> representation — a weighted mixture of all tokens' values, where weights came from query-key similarity. This is self-attention.</div>`;
 }
 el.innerHTML=h;
 }
 
-// ═══════ TEMPERATURE VISUALIZATION ═══════
+// ═══════ TEMPERATURE / SCALING VIZ ═══════
 function drawTemp(){
 const dk=parseInt(document.getElementById('temp-dk').value);
 const rawScores=[2.0,1.0,0.5,-0.3,0.1];
 const scaledScores=rawScores.map(v=>v*Math.sqrt(dk));
-
-function drawBar(cvId,scores,title){
+function drawBar(cvId,scores){
 const cv=document.getElementById(cvId);if(!cv)return;
 const W=cv.parentElement.clientWidth-16,H=160;
 const ctx=hiDPI(cv,W,H);ctx.clearRect(0,0,W,H);
-const mx=Math.max(...scores);const ex=scores.map(v=>Math.exp(v-mx));const s=ex.reduce((a,b)=>a+b,0);
-const probs=ex.map(v=>v/s);
-const pad={t:20,b:24,l:8,r:8};
-const barW=(W-pad.l-pad.r)/scores.length-6;
-const maxP=Math.max(...probs);
-const colors=['#f97316','#3b82f6','#22c55e','#a855f7','#ef4444'];
+const mx=Math.max(...scores),ex=scores.map(v=>Math.exp(v-mx)),s=ex.reduce((a,b)=>a+b,0),probs=ex.map(v=>v/s);
+const pad={t:20,b:24,l:8,r:8},barW=(W-pad.l-pad.r)/scores.length-6,maxP=Math.max(...probs);
+const colors=['#e11d48','#2563eb','#16a34a','#7c3aed','#d97706'];
 probs.forEach((p,i)=>{
-const bh=(p/maxP)*(H-pad.t-pad.b-14);
-const x=pad.l+i*(barW+6)+3;
-ctx.fillStyle=colors[i%5];
-ctx.beginPath();ctx.roundRect(x,H-pad.b-bh,barW,bh,3);ctx.fill();
-ctx.fillStyle='var(--g800)';ctx.font='bold 9px JetBrains Mono';ctx.textAlign='center';
+const bh=(p/maxP)*(H-pad.t-pad.b-14),x=pad.l+i*(barW+6)+3;
+ctx.fillStyle=colors[i%5];ctx.beginPath();ctx.roundRect(x,H-pad.b-bh,barW,bh,3);ctx.fill();
+ctx.fillStyle='#1c1917';ctx.font='600 9px IBM Plex Mono';ctx.textAlign='center';
 ctx.fillText((p*100).toFixed(1)+'%',x+barW/2,H-pad.b-bh-5);
-ctx.fillStyle='var(--g500)';ctx.font='8px JetBrains Mono';
-ctx.fillText('s='+scores[i].toFixed(1),x+barW/2,H-pad.b+12);
-});
-}
-drawBar('temp-no',scaledScores);
-drawBar('temp-yes',rawScores);
+ctx.fillStyle='#78716c';ctx.font='500 8px IBM Plex Mono';ctx.fillText('s='+scores[i].toFixed(1),x+barW/2,H-pad.b+12);
+});}
+drawBar('temp-no',scaledScores);drawBar('temp-yes',rawScores);
 }
 
-// ═══════ MULTI-HEAD VISUALIZATION ═══════
+// ═══════ MULTI-HEAD VIZ ═══════
 function drawMH(){
-const dm=parseInt(document.getElementById('mh-dmodel').value);
-const h=parseInt(document.getElementById('mh-heads').value);
-const dk=Math.floor(dm/h);
-document.getElementById('mh-dims').innerHTML=`<div class="g4"><div class="stat-card"><div class="stat-val">${dm}</div><div class="stat-lbl">d_model</div></div><div class="stat-card"><div class="stat-val">${h}</div><div class="stat-lbl">heads (h)</div></div><div class="stat-card"><div class="stat-val">${dk}</div><div class="stat-lbl">d_k = d_model/h</div></div><div class="stat-card"><div class="stat-val">${dm*dm*3+dm*dm}</div><div class="stat-lbl">total params (approx)</div></div></div>`;
-
+const dm=parseInt(document.getElementById('mh-dmodel').value),h=parseInt(document.getElementById('mh-heads').value),dk=Math.floor(dm/h);
+document.getElementById('mh-dims').innerHTML=`<div class="g4"><div class="stat-card"><div class="stat-val">${dm}</div><div class="stat-lbl">d_model</div></div><div class="stat-card"><div class="stat-val">${h}</div><div class="stat-lbl">heads</div></div><div class="stat-card"><div class="stat-val">${dk}</div><div class="stat-lbl">d_k=d_model/h</div></div><div class="stat-card"><div class="stat-val">${(dm*dm*4/1e6).toFixed(1)}M</div><div class="stat-lbl">attn params</div></div></div>`;
 const cv=document.getElementById('mh-canvas');if(!cv)return;
 const W=cv.parentElement.clientWidth-16,H=100;
 const ctx=hiDPI(cv,W,H);ctx.clearRect(0,0,W,H);
-const colors=['#f97316','#3b82f6','#22c55e','#a855f7','#ef4444','#14b8a6','#eab308','#ec4899','#6366f1','#84cc16','#f43f5e','#06b6d4','#8b5cf6','#d946ef','#10b981','#f59e0b'];
-const pad={l:8,r:8,t:24,b:16};
-const totalW=W-pad.l-pad.r;
-const headW=totalW/h;
-
-ctx.font='bold 10px JetBrains Mono';ctx.textAlign='center';
+const colors=['#e11d48','#2563eb','#16a34a','#7c3aed','#d97706','#0d9488','#db2777','#6366f1','#ea580c','#0891b2','#4f46e5','#be185d','#059669','#b45309','#7c2d12','#4338ca'];
+const pad={l:8,r:8,t:24,b:16},totalW=W-pad.l-pad.r,headW=totalW/h;
+ctx.font='600 10px IBM Plex Mono';ctx.textAlign='center';
 for(let i=0;i<h;i++){
-ctx.fillStyle=colors[i%16]+'40';ctx.fillRect(pad.l+i*headW,pad.t,headW-1,H-pad.t-pad.b);
+ctx.fillStyle=colors[i%16]+'30';ctx.fillRect(pad.l+i*headW,pad.t,headW-1,H-pad.t-pad.b);
 ctx.fillStyle=colors[i%16];ctx.fillRect(pad.l+i*headW,pad.t,headW-1,4);
-ctx.fillText(`Head ${i+1}`,pad.l+i*headW+headW/2,pad.t+28);
-ctx.font='8px JetBrains Mono';ctx.fillStyle='var(--g500)';
-ctx.fillText(`dims ${i*dk}–${(i+1)*dk-1}`,pad.l+i*headW+headW/2,pad.t+44);
-ctx.font='bold 10px JetBrains Mono';
-}
-ctx.fillStyle='var(--g400)';ctx.font='9px JetBrains Mono';ctx.textAlign='left';
-ctx.fillText(`Total: ${h} heads × ${dk} dims = ${h*dk} = d_model`,pad.l,H-2);
+ctx.fillText(`H${i+1}`,pad.l+i*headW+headW/2,pad.t+28);
+ctx.font='500 8px IBM Plex Mono';ctx.fillStyle='#78716c';
+ctx.fillText(`d${i*dk}–${(i+1)*dk-1}`,pad.l+i*headW+headW/2,pad.t+42);
+ctx.font='600 10px IBM Plex Mono';}
+ctx.fillStyle='#78716c';ctx.font='500 9px IBM Plex Mono';ctx.textAlign='left';
+ctx.fillText(`${h} heads × ${dk} dims = ${h*dk} = d_model`,pad.l,H-2);
 }
 
-// ═══════ FFN VISUALIZATION ═══════
+// ═══════ FFN VIZ ═══════
 function drawFFN(){
-const dm=parseInt(document.getElementById('ffn-dm').value);
-const dff=parseInt(document.getElementById('ffn-dff').value);
+const dm=parseInt(document.getElementById('ffn-dm').value),dff=parseInt(document.getElementById('ffn-dff').value);
 const cv=document.getElementById('ffn-canvas');if(!cv)return;
 const W=cv.parentElement.clientWidth-16,H=140;
 const ctx=hiDPI(cv,W,H);ctx.clearRect(0,0,W,H);
-const pad={l:20,r:20,t:14,b:14};
-const pw=W-pad.l-pad.r;
-const maxD=Math.max(dm,dff);
+const pad={l:20,r:20,t:14,b:14},pw=W-pad.l-pad.r,maxD=Math.max(dm,dff);
 const w1=dm/maxD*pw*0.3,w2=dff/maxD*pw*0.3,w3=dm/maxD*pw*0.3;
-const cx=W/2,cy=H/2;
-const y1=pad.t,y2=H-pad.b;
-// Input
-ctx.fillStyle='#3b82f620';ctx.fillRect(cx-pw*0.42,y1,w1,y2-y1);
-ctx.strokeStyle='#3b82f6';ctx.lineWidth=2;ctx.strokeRect(cx-pw*0.42,y1,w1,y2-y1);
-// Hidden (wider)
-ctx.fillStyle='#f9731620';ctx.fillRect(cx-w2/2,y1,w2,y2-y1);
-ctx.strokeStyle='#f97316';ctx.lineWidth=2;ctx.strokeRect(cx-w2/2,y1,w2,y2-y1);
-// Output
-ctx.fillStyle='#22c55e20';ctx.fillRect(cx+pw*0.42-w3,y1,w3,y2-y1);
-ctx.strokeStyle='#22c55e';ctx.lineWidth=2;ctx.strokeRect(cx+pw*0.42-w3,y1,w3,y2-y1);
-// Arrows
-ctx.strokeStyle='var(--g400)';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);
-ctx.beginPath();ctx.moveTo(cx-pw*0.42+w1+5,cy);ctx.lineTo(cx-w2/2-5,cy);ctx.stroke();
-ctx.beginPath();ctx.moveTo(cx+w2/2+5,cy);ctx.lineTo(cx+pw*0.42-w3-5,cy);ctx.stroke();
+const cx=W/2,y1=pad.t,y2=H-pad.b;
+[['#2563eb',cx-pw*0.42,w1,dm,'d_model'],['#e11d48',cx-w2/2,w2,dff,'d_ff'],['#16a34a',cx+pw*0.42-w3,w3,dm,'d_model']].forEach(([c,x,w,val,lbl])=>{
+ctx.fillStyle=c+'18';ctx.fillRect(x,y1,w,y2-y1);ctx.strokeStyle=c;ctx.lineWidth=2;ctx.strokeRect(x,y1,w,y2-y1);
+ctx.fillStyle=c;ctx.font='600 10px IBM Plex Mono';ctx.textAlign='center';ctx.fillText(lbl,x+w/2,(y1+y2)/2-8);ctx.fillText(`${val}`,x+w/2,(y1+y2)/2+10);
+});
+ctx.strokeStyle='#a8a29e';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);
+ctx.beginPath();ctx.moveTo(cx-pw*0.42+w1+5,(y1+y2)/2);ctx.lineTo(cx-w2/2-5,(y1+y2)/2);ctx.stroke();
+ctx.beginPath();ctx.moveTo(cx+w2/2+5,(y1+y2)/2);ctx.lineTo(cx+pw*0.42-w3-5,(y1+y2)/2);ctx.stroke();
 ctx.setLineDash([]);
-// Labels
-ctx.fillStyle='#3b82f6';ctx.font='bold 10px JetBrains Mono';ctx.textAlign='center';
-ctx.fillText(`d_model`,cx-pw*0.42+w1/2,cy-8);ctx.fillText(`${dm}`,cx-pw*0.42+w1/2,cy+10);
-ctx.fillStyle='#f97316';ctx.fillText(`d_ff`,cx,cy-8);ctx.fillText(`${dff}`,cx,cy+10);
-ctx.fillStyle='#22c55e';ctx.fillText(`d_model`,cx+pw*0.42-w3/2,cy-8);ctx.fillText(`${dm}`,cx+pw*0.42-w3/2,cy+10);
-// ReLU label
-ctx.fillStyle='#ef4444';ctx.font='bold 9px JetBrains Mono';ctx.fillText('ReLU',cx-pw*0.14,cy+28);
-ctx.fillStyle='var(--g400)';ctx.font='8px JetBrains Mono';
-ctx.fillText('W₁ · x + b₁',cx-pw*0.14,cy-28);ctx.fillText('W₂ · x + b₂',cx+pw*0.14,cy-28);
+ctx.fillStyle='#e11d48';ctx.font='600 9px IBM Plex Mono';ctx.textAlign='center';ctx.fillText('ReLU',cx-pw*0.14,(y1+y2)/2+28);
 }
 
 // ═══════ ENCODER DATA FLOW ═══════
@@ -683,190 +799,127 @@ function drawEncFlow(){
 const cv=document.getElementById('enc-flow');if(!cv)return;
 const W=cv.parentElement.clientWidth-16,H=260;
 const ctx=hiDPI(cv,W,H);ctx.clearRect(0,0,W,H);
-const stages=['Input\nEmbedding','+ Position\nEncoding','Multi-Head\nSelf-Attention','Add &\nNorm','Feed-Forward\nNetwork','Add &\nNorm','Output'];
-const colors=['#3b82f6','#a855f7','#f97316','#14b8a6','#22c55e','#14b8a6','#3b82f6'];
+const stages=['Input\nEmbed','+ Position\nEncoding','Multi-Head\nSelf-Attn','Add &\nNorm','Feed-Forward\nNetwork','Add &\nNorm','Output'];
+const colors=['#2563eb','#7c3aed','#e11d48','#0d9488','#16a34a','#0d9488','#2563eb'];
 const stageW=(W-40)/stages.length;
 stages.forEach((s,i)=>{
 const x=20+i*stageW;
-ctx.fillStyle=colors[i]+'18';ctx.strokeStyle=colors[i];ctx.lineWidth=1.5;
+ctx.fillStyle=colors[i]+'15';ctx.strokeStyle=colors[i];ctx.lineWidth=1.5;
 ctx.beginPath();ctx.roundRect(x+4,30,stageW-8,80,8);ctx.fill();ctx.stroke();
-ctx.fillStyle=colors[i];ctx.font='bold 9px JetBrains Mono';ctx.textAlign='center';
-const lines=s.split('\n');lines.forEach((l,li)=>ctx.fillText(l,x+stageW/2,55+li*14));
-// Arrow
-if(i<stages.length-1){ctx.strokeStyle='var(--g400)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+stageW-4,70);ctx.lineTo(x+stageW+4,70);ctx.stroke();
-ctx.beginPath();ctx.moveTo(x+stageW+1,66);ctx.lineTo(x+stageW+5,70);ctx.lineTo(x+stageW+1,74);ctx.fill();}
-// Token boxes
-for(let t=0;t<4;t++){
-ctx.fillStyle=colors[i]+'30';ctx.fillRect(x+8+t*(stageW-16)/4,130+t*25,stageW*0.18,20);
-ctx.strokeStyle=colors[i]+'60';ctx.lineWidth=0.5;ctx.strokeRect(x+8+t*(stageW-16)/4,130+t*25,stageW*0.18,20);
-}
+ctx.fillStyle=colors[i];ctx.font='600 9px IBM Plex Mono';ctx.textAlign='center';
+s.split('\n').forEach((l,li)=>ctx.fillText(l,x+stageW/2,55+li*14));
+if(i<stages.length-1){ctx.strokeStyle='#a8a29e';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+stageW-4,70);ctx.lineTo(x+stageW+4,70);ctx.stroke();}
 });
-// Residual connection arrows
-ctx.strokeStyle='#14b8a660';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+ctx.strokeStyle='#0d948860';ctx.lineWidth=1;ctx.setLineDash([4,3]);
 ctx.beginPath();ctx.moveTo(20+1*stageW+stageW/2,110);ctx.quadraticCurveTo(20+1*stageW+stageW/2,125,20+3*stageW+stageW/2,125);ctx.lineTo(20+3*stageW+stageW/2,110);ctx.stroke();
 ctx.beginPath();ctx.moveTo(20+3*stageW+stageW/2,110);ctx.quadraticCurveTo(20+3*stageW+stageW/2,125,20+5*stageW+stageW/2,125);ctx.lineTo(20+5*stageW+stageW/2,110);ctx.stroke();
-ctx.setLineDash([]);
-ctx.fillStyle='var(--g400)';ctx.font='8px JetBrains Mono';ctx.textAlign='center';
-ctx.fillText('residual connection',20+2*stageW+stageW/2,122);ctx.fillText('residual connection',20+4*stageW+stageW/2,122);
-
-document.getElementById('enc-params').innerHTML=`<div class="sb"><div class="sl">Parameters per Encoder Layer (base model)</div>Self-Attention: 4 × (512 × 512) = <strong>1,048,576</strong> (W<sup>Q</sup>, W<sup>K</sup>, W<sup>V</sup>, W<sup>O</sup>)<br>Feed-Forward: 512×2048 + 2048×512 = <strong>2,097,152</strong><br>LayerNorm: 2 × 2 × 512 = <strong>2,048</strong><br>Total per layer: <strong>≈ 3.15M</strong> × 6 layers = <strong>≈ 18.9M</strong> (encoder only)</div>`;
+ctx.setLineDash([]);ctx.fillStyle='#78716c';ctx.font='500 8px IBM Plex Mono';ctx.textAlign='center';
+ctx.fillText('residual',20+2*stageW+stageW/2,122);ctx.fillText('residual',20+4*stageW+stageW/2,122);
+document.getElementById('enc-params').innerHTML=`<div class="sb s-teal"><div class="sl">Parameters per encoder layer (base)</div>Self-Attention: 4×(512×512) = <strong>1,048,576</strong> (W<sup>Q</sup>, W<sup>K</sup>, W<sup>V</sup>, W<sup>O</sup>)<br>FFN: 512×2048 + 2048×512 = <strong>2,097,152</strong><br>LayerNorm: 2×2×512 = <strong>2,048</strong><br>Total: <strong>≈3.15M</strong> × 6 layers = <strong>≈18.9M</strong> encoder</div>`;
 }
 
-// ═══════ DECODER: MASK ═══════
+// ═══════ DECODER MASK ═══════
 function drawMask(){
-const n=parseInt(document.getElementById('mask-len').value);
-const labels=Array.from({length:n},(_,i)=>'pos_'+i);
-
-// Mask grid
+const n=parseInt(document.getElementById('mask-len').value),labels=Array.from({length:n},(_,i)=>'p'+i);
 let h='<table class="mtx"><tr><td></td>';
-labels.forEach(l=>h+=`<td style="background:var(--g800);color:var(--g200);font-size:0.6rem;">${l}</td>`);h+='</tr>';
-for(let i=0;i<n;i++){
-h+=`<tr><td style="background:var(--g800);color:var(--g200);font-size:0.6rem;">${labels[i]}</td>`;
-for(let j=0;j<n;j++){
-const allowed=j<=i;
-h+=`<td style="background:${allowed?'#dcfce7':'#fee2e2'};color:${allowed?'#15803d':'#dc2626'};font-weight:600;">${allowed?'0':'−∞'}</td>`;
-}h+='</tr>';}
+labels.forEach(l=>h+=`<td style="background:var(--txt);color:var(--bg);font-size:0.6rem;">${l}</td>`);h+='</tr>';
+for(let i=0;i<n;i++){h+=`<tr><td style="background:var(--txt);color:var(--bg);font-size:0.6rem;">${labels[i]}</td>`;
+for(let j=0;j<n;j++){const ok=j<=i;h+=`<td style="background:${ok?'#dcfce7':'#fee2e2'};color:${ok?'#15803d':'#dc2626'};font-weight:600;">${ok?'0':'−∞'}</td>`;}h+='</tr>';}
 document.getElementById('mask-grid').innerHTML=h+'</table>';
-
-// Softmax after mask
 let sh='<table class="mtx"><tr><td></td>';
-labels.forEach(l=>sh+=`<td style="background:var(--g800);color:var(--g200);font-size:0.6rem;">${l}</td>`);sh+='</tr>';
-for(let i=0;i<n;i++){
-sh+=`<tr><td style="background:var(--g800);color:var(--g200);font-size:0.6rem;">${labels[i]}</td>`;
-const allowed=i+1;const w=+(1/allowed).toFixed(3);
-for(let j=0;j<n;j++){
-const val=j<=i?w:0;const intense=val>0?Math.round(val*255):0;
-sh+=`<td style="background:rgba(34,197,94,${val*0.4});font-weight:${val>0?'600':'400'};color:${val>0?'#15803d':'#e4e4e7'};">${val.toFixed(3)}</td>`;
-}sh+='</tr>';}
-document.getElementById('mask-softmax').innerHTML=sh+'</table><div class="ref">Uniform attention shown for illustration — actual weights depend on QK<sup>T</sup> values.</div>';
+labels.forEach(l=>sh+=`<td style="background:var(--txt);color:var(--bg);font-size:0.6rem;">${l}</td>`);sh+='</tr>';
+for(let i=0;i<n;i++){sh+=`<tr><td style="background:var(--txt);color:var(--bg);font-size:0.6rem;">${labels[i]}</td>`;
+const w=+(1/(i+1)).toFixed(3);
+for(let j=0;j<n;j++){const v=j<=i?w:0;
+sh+=`<td style="background:rgba(22,163,74,${v*0.4});font-weight:${v>0?'600':'400'};color:${v>0?'#15803d':'#d6d3d1'};">${v.toFixed(3)}</td>`;}sh+='</tr>';}
+document.getElementById('mask-softmax').innerHTML=sh+'</table><div class="ref">Uniform weights shown — actual weights depend on QK<sup>T</sup> values.</div>';
 }
 
-// ═══════ DECODER: CROSS-ATTENTION ═══════
+// ═══════ CROSS-ATTENTION VIZ ═══════
 function drawCross(){
 const cv=document.getElementById('cross-canvas');if(!cv)return;
 const W=cv.parentElement.clientWidth-16,H=200;
 const ctx=hiDPI(cv,W,H);ctx.clearRect(0,0,W,H);
-const encTokens=['I','love','ML'];const decTokens=['Ich','liebe'];
-const pad={l:30,r:30};
-
-// Encoder side
-const eW=(W-60)/2;ctx.fillStyle='#f9731620';ctx.strokeStyle='#f97316';ctx.lineWidth=1.5;
+const encT=['I','love','ML'],decT=['Ich','liebe'];
+const eW=(W-60)/2,pad={l:30,r:30};
+// Encoder
+ctx.fillStyle='#e11d4815';ctx.strokeStyle='#e11d48';ctx.lineWidth=1.5;
 ctx.beginPath();ctx.roundRect(pad.l,10,eW,55,8);ctx.fill();ctx.stroke();
-ctx.fillStyle='#f97316';ctx.font='bold 10px JetBrains Mono';ctx.textAlign='center';ctx.fillText('Encoder Output',pad.l+eW/2,32);
-ctx.font='9px JetBrains Mono';ctx.fillStyle='var(--g600)';
-encTokens.forEach((t,i)=>{const x=pad.l+20+i*(eW-40)/encTokens.length;ctx.fillText('"'+t+'"',x+30,52);});
-
-// Decoder side
-const dX=W-pad.r-eW;ctx.fillStyle='#3b82f620';ctx.strokeStyle='#3b82f6';ctx.lineWidth=1.5;
+ctx.fillStyle='#e11d48';ctx.font='600 10px IBM Plex Mono';ctx.textAlign='center';ctx.fillText('Encoder Output',pad.l+eW/2,32);
+ctx.font='500 9px IBM Plex Mono';ctx.fillStyle='#44403c';
+encT.forEach((t,i)=>ctx.fillText('"'+t+'"',pad.l+20+i*(eW-40)/encT.length+30,52));
+// Decoder
+const dX=W-pad.r-eW;
+ctx.fillStyle='#2563eb15';ctx.strokeStyle='#2563eb';ctx.lineWidth=1.5;
 ctx.beginPath();ctx.roundRect(dX,10,eW,55,8);ctx.fill();ctx.stroke();
-ctx.fillStyle='#3b82f6';ctx.font='bold 10px JetBrains Mono';ctx.textAlign='center';ctx.fillText('Decoder State',dX+eW/2,32);
-ctx.font='9px JetBrains Mono';ctx.fillStyle='var(--g600)';
-decTokens.forEach((t,i)=>{const x=dX+20+i*(eW-40)/decTokens.length;ctx.fillText('"'+t+'"',x+40,52);});
-
-// Cross-attention box
-const caY=90;ctx.fillStyle='#14b8a620';ctx.strokeStyle='#14b8a6';ctx.lineWidth=2;
+ctx.fillStyle='#2563eb';ctx.font='600 10px IBM Plex Mono';ctx.textAlign='center';ctx.fillText('Decoder State',dX+eW/2,32);
+ctx.font='500 9px IBM Plex Mono';ctx.fillStyle='#44403c';
+decT.forEach((t,i)=>ctx.fillText('"'+t+'"',dX+20+i*(eW-40)/decT.length+40,52));
+// Cross-attn box
+const caY=90;ctx.fillStyle='#0d948815';ctx.strokeStyle='#0d9488';ctx.lineWidth=2;
 ctx.beginPath();ctx.roundRect(W/2-80,caY,160,40,8);ctx.fill();ctx.stroke();
-ctx.fillStyle='#14b8a6';ctx.font='bold 10px JetBrains Mono';ctx.textAlign='center';ctx.fillText('Cross-Attention',W/2,caY+24);
-
+ctx.fillStyle='#0d9488';ctx.font='600 10px IBM Plex Mono';ctx.textAlign='center';ctx.fillText('Cross-Attention',W/2,caY+24);
 // Arrows
-ctx.strokeStyle='#f97316';ctx.lineWidth=1.5;
-ctx.beginPath();ctx.moveTo(pad.l+eW/2,65);ctx.quadraticCurveTo(pad.l+eW/2,caY,W/2-80,caY+20);ctx.stroke();
-ctx.fillStyle='#f97316';ctx.font='8px JetBrains Mono';ctx.textAlign='right';ctx.fillText('K, V',W/2-85,caY+14);
-
-ctx.strokeStyle='#3b82f6';ctx.lineWidth=1.5;
-ctx.beginPath();ctx.moveTo(dX+eW/2,65);ctx.quadraticCurveTo(dX+eW/2,caY,W/2+80,caY+20);ctx.stroke();
-ctx.fillStyle='#3b82f6';ctx.font='8px JetBrains Mono';ctx.textAlign='left';ctx.fillText('Q',W/2+85,caY+14);
-
-// Output arrow
-ctx.strokeStyle='var(--g400)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(W/2,caY+40);ctx.lineTo(W/2,caY+70);ctx.stroke();
-ctx.beginPath();ctx.moveTo(W/2-4,caY+66);ctx.lineTo(W/2,caY+72);ctx.lineTo(W/2+4,caY+66);ctx.fillStyle='var(--g400)';ctx.fill();
-ctx.fillStyle='var(--g600)';ctx.font='9px JetBrains Mono';ctx.textAlign='center';ctx.fillText('Context-enriched decoder representation',W/2,caY+84);
+ctx.strokeStyle='#e11d48';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(pad.l+eW/2,65);ctx.quadraticCurveTo(pad.l+eW/2,caY,W/2-80,caY+20);ctx.stroke();
+ctx.fillStyle='#e11d48';ctx.font='600 8px IBM Plex Mono';ctx.textAlign='right';ctx.fillText('K, V',W/2-85,caY+14);
+ctx.strokeStyle='#2563eb';ctx.beginPath();ctx.moveTo(dX+eW/2,65);ctx.quadraticCurveTo(dX+eW/2,caY,W/2+80,caY+20);ctx.stroke();
+ctx.fillStyle='#2563eb';ctx.font='600 8px IBM Plex Mono';ctx.textAlign='left';ctx.fillText('Q',W/2+85,caY+14);
+ctx.strokeStyle='#a8a29e';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(W/2,caY+40);ctx.lineTo(W/2,caY+70);ctx.stroke();
+ctx.beginPath();ctx.moveTo(W/2-4,caY+66);ctx.lineTo(W/2,caY+72);ctx.lineTo(W/2+4,caY+66);ctx.fillStyle='#a8a29e';ctx.fill();
+ctx.fillStyle='#44403c';ctx.font='500 9px IBM Plex Mono';ctx.textAlign='center';ctx.fillText('Context-enriched decoder output',W/2,caY+84);
 }
 
-// ═══════ TRAINING: GENERATION VIZ ═══════
+// ═══════ TRAINING: GENERATION ═══════
 function drawGen(){
 const cv=document.getElementById('gen-canvas');if(!cv)return;
 const W=cv.parentElement.clientWidth-16,H=180;
 const ctx=hiDPI(cv,W,H);ctx.clearRect(0,0,W,H);
-const steps=[
-{inp:['<SOS>'],out:'Ich'},
-{inp:['<SOS>','Ich'],out:'liebe'},
-{inp:['<SOS>','Ich','liebe'],out:'ML'},
-{inp:['<SOS>','Ich','liebe','ML'],out:'<EOS>'}
-];
+const steps=[{inp:['<SOS>'],out:'Ich'},{inp:['<SOS>','Ich'],out:'liebe'},{inp:['<SOS>','Ich','liebe'],out:'ML'},{inp:['<SOS>','Ich','liebe','ML'],out:'<EOS>'}];
 const stepW=(W-20)/steps.length;
-
 steps.forEach((s,si)=>{
 const x=10+si*stepW;
-ctx.fillStyle='#f9731610';ctx.strokeStyle='#f97316';ctx.lineWidth=1;
+ctx.fillStyle='#e11d4808';ctx.strokeStyle='#e11d48';ctx.lineWidth=1;
 ctx.beginPath();ctx.roundRect(x+2,8,stepW-4,H-16,8);ctx.fill();ctx.stroke();
-ctx.fillStyle='var(--g600)';ctx.font='bold 9px JetBrains Mono';ctx.textAlign='center';
-ctx.fillText(`Step ${si+1}`,x+stepW/2,26);
-
-// Input tokens
-ctx.font='8px JetBrains Mono';ctx.fillStyle='var(--g500)';ctx.fillText('Decoder input:',x+stepW/2,44);
+ctx.fillStyle='#44403c';ctx.font='600 9px IBM Plex Mono';ctx.textAlign='center';ctx.fillText(`Step ${si+1}`,x+stepW/2,26);
+ctx.font='500 8px IBM Plex Mono';ctx.fillStyle='#78716c';ctx.fillText('Input:',x+stepW/2,44);
 s.inp.forEach((t,ti)=>{
-ctx.fillStyle='#3b82f620';ctx.fillRect(x+8+ti*(stepW-16)/5,50,Math.min(40,(stepW-16)/5-2),18);
-ctx.fillStyle='#3b82f6';ctx.font='7px JetBrains Mono';ctx.textAlign='center';
-ctx.fillText(t,x+8+ti*(stepW-16)/5+Math.min(20,(stepW-16)/10),62);
-});
-
-// Arrow
-ctx.strokeStyle='var(--g300)';ctx.beginPath();ctx.moveTo(x+stepW/2,74);ctx.lineTo(x+stepW/2,90);ctx.stroke();
-
-// Transformer box
-ctx.fillStyle='#a855f720';ctx.strokeStyle='#a855f7';ctx.lineWidth=1;
+ctx.fillStyle='#2563eb18';ctx.fillRect(x+8+ti*(stepW-16)/5,50,Math.min(40,(stepW-16)/5-2),18);
+ctx.fillStyle='#2563eb';ctx.font='500 7px IBM Plex Mono';ctx.textAlign='center';
+ctx.fillText(t,x+8+ti*(stepW-16)/5+Math.min(20,(stepW-16)/10),62);});
+ctx.strokeStyle='#d6d3d1';ctx.beginPath();ctx.moveTo(x+stepW/2,74);ctx.lineTo(x+stepW/2,90);ctx.stroke();
+ctx.fillStyle='#7c3aed18';ctx.strokeStyle='#7c3aed';ctx.lineWidth=1;
 ctx.beginPath();ctx.roundRect(x+10,92,stepW-20,24,4);ctx.fill();ctx.stroke();
-ctx.fillStyle='#a855f7';ctx.font='bold 8px JetBrains Mono';ctx.textAlign='center';ctx.fillText('Transformer',x+stepW/2,108);
-
-// Output
-ctx.strokeStyle='var(--g300)';ctx.beginPath();ctx.moveTo(x+stepW/2,116);ctx.lineTo(x+stepW/2,130);ctx.stroke();
-ctx.fillStyle='#22c55e30';ctx.strokeStyle='#22c55e';ctx.lineWidth=1.5;
+ctx.fillStyle='#7c3aed';ctx.font='600 8px IBM Plex Mono';ctx.textAlign='center';ctx.fillText('Transformer',x+stepW/2,108);
+ctx.strokeStyle='#d6d3d1';ctx.beginPath();ctx.moveTo(x+stepW/2,116);ctx.lineTo(x+stepW/2,130);ctx.stroke();
+ctx.fillStyle='#16a34a25';ctx.strokeStyle='#16a34a';ctx.lineWidth=1.5;
 ctx.beginPath();ctx.roundRect(x+stepW/2-20,132,40,22,4);ctx.fill();ctx.stroke();
-ctx.fillStyle='#22c55e';ctx.font='bold 9px JetBrains Mono';ctx.textAlign='center';ctx.fillText(s.out,x+stepW/2,147);
-});
-
-document.getElementById('gen-steps').innerHTML=`<div class="rb"><div class="rl">Auto-Regressive Generation</div>Each step feeds the previously generated tokens back as decoder input. The encoder processes the source <strong>once</strong>, then the decoder generates one token at a time until &lt;EOS&gt;. This is why inference is sequential even though training is parallel.</div>`;
+ctx.fillStyle='#16a34a';ctx.font='600 9px IBM Plex Mono';ctx.textAlign='center';ctx.fillText(s.out,x+stepW/2,147);});
+document.getElementById('gen-steps').innerHTML=`<div class="sb s-green"><div class="sl">Auto-regressive</div>Each step feeds previous tokens back as decoder input. Encoder runs <strong>once</strong>, decoder generates one token at a time until &lt;EOS&gt;.</div>`;
 }
 
-// ═══════ LEARNING RATE SCHEDULE ═══════
+// ═══════ LEARNING RATE ═══════
 function drawLR(){
 const warmup=parseInt(document.getElementById('lr-warmup').value);
 const cv=document.getElementById('lr-canvas');if(!cv)return;
 const W=cv.parentElement.clientWidth-16,H=180;
 const ctx=hiDPI(cv,W,H);ctx.clearRect(0,0,W,H);
-const pad={t:18,r:15,b:28,l:48};
-const maxStep=30000;const dm=512;
+const pad={t:18,r:15,b:28,l:48},maxStep=30000,dm=512;
 const points=[];let maxLR=0;
-for(let s=1;s<=maxStep;s+=100){
-const lr=Math.pow(dm,-0.5)*Math.min(Math.pow(s,-0.5),s*Math.pow(warmup,-1.5));
-points.push({s,lr});if(lr>maxLR)maxLR=lr;
-}
+for(let s=1;s<=maxStep;s+=100){const lr=Math.pow(dm,-0.5)*Math.min(Math.pow(s,-0.5),s*Math.pow(warmup,-1.5));points.push({s,lr});if(lr>maxLR)maxLR=lr;}
 function tx(s){return pad.l+(s/maxStep)*(W-pad.l-pad.r);}
 function ty(lr){return pad.t+(1-lr/maxLR)*(H-pad.t-pad.b);}
-
-// Grid
-ctx.strokeStyle='#f1f3f5';ctx.lineWidth=0.5;
+ctx.strokeStyle='#e7e5e4';ctx.lineWidth=0.5;
 for(let i=0;i<=4;i++){const y=pad.t+i*(H-pad.t-pad.b)/4;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();}
-
-// Curve
-ctx.strokeStyle='#f97316';ctx.lineWidth=2;ctx.beginPath();
-points.forEach((p,i)=>{i===0?ctx.moveTo(tx(p.s),ty(p.lr)):ctx.lineTo(tx(p.s),ty(p.lr));});
-ctx.stroke();
-
-// Warmup line
-ctx.strokeStyle='#ef444460';ctx.lineWidth=1;ctx.setLineDash([4,3]);
-ctx.beginPath();ctx.moveTo(tx(warmup),pad.t);ctx.lineTo(tx(warmup),H-pad.b);ctx.stroke();
-ctx.setLineDash([]);
-ctx.fillStyle='#ef4444';ctx.font='8px JetBrains Mono';ctx.textAlign='center';
-ctx.fillText(`warmup=${warmup}`,tx(warmup),pad.t-4);
-
-// Axes
-ctx.fillStyle='var(--g400)';ctx.font='8px JetBrains Mono';ctx.textAlign='center';
+ctx.strokeStyle='#e11d48';ctx.lineWidth=2;ctx.beginPath();
+points.forEach((p,i)=>{i===0?ctx.moveTo(tx(p.s),ty(p.lr)):ctx.lineTo(tx(p.s),ty(p.lr));});ctx.stroke();
+ctx.strokeStyle='#2563eb50';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+ctx.beginPath();ctx.moveTo(tx(warmup),pad.t);ctx.lineTo(tx(warmup),H-pad.b);ctx.stroke();ctx.setLineDash([]);
+ctx.fillStyle='#2563eb';ctx.font='500 8px IBM Plex Mono';ctx.textAlign='center';ctx.fillText(`warmup=${warmup}`,tx(warmup),pad.t-4);
+ctx.fillStyle='#78716c';ctx.font='500 8px IBM Plex Mono';ctx.textAlign='center';
 for(let s=0;s<=maxStep;s+=5000)ctx.fillText(s/1000+'k',tx(s),H-pad.b+14);
 ctx.textAlign='right';
 for(let i=0;i<=4;i++){const lr=maxLR*(1-i/4);ctx.fillText(lr.toExponential(1),pad.l-4,pad.t+i*(H-pad.t-pad.b)/4+4);}
-ctx.fillStyle='var(--g500)';ctx.font='9px Space Grotesk';ctx.textAlign='center';ctx.fillText('Training Steps',W/2,H-2);
+ctx.fillStyle='#78716c';ctx.font='500 9px Outfit';ctx.textAlign='center';ctx.fillText('Training steps',W/2,H-2);
 }
 
 // ═══════ INIT ═══════
