@@ -293,12 +293,12 @@ pipe[:<span class="num">2</span>]              <span class="cm"># slicing → re
 
 <div class="card">
 <h3>Why do we need ColumnTransformer?</h3>
-<p>Most real-world datasets contain a mix of feature types. For example, a dataset might have numerical columns (like <code>Age</code> and <code>Fare</code>) and categorical columns (like <code>Sex</code> and <code>Embarked</code>). You cannot apply a <code>StandardScaler</code> to categorical text, and you shouldn't apply <code>OneHotEncoder</code> to continuous numbers.</p>
+<p>Most real-world datasets contain a mix of feature types. For example, a dataset might have numerical columns (like <code>Age</code> and <code>Fare</code>) and categorical columns (like <code>Gender</code> and <code>EducationLevel</code>). You cannot apply a <code>StandardScaler</code> to categorical text, and you shouldn't apply <code>OneHotEncoder</code> to continuous numbers.</p>
 <p><code>ColumnTransformer</code> allows you to apply different preprocessing pipelines to different subsets of features, and then it automatically concatenates the results back into a single feature matrix.</p>
 </div>
 
 <div class="ct-diagram">
-  <div class="ct-box df-box">Input DataFrame (X)<br><small style="font-weight:normal">['Age', 'Fare', 'Sex', 'Embarked']</small></div>
+  <div class="ct-box df-box">Input DataFrame (X)<br><small style="font-weight:normal">['Age', 'Fare', 'Gender', 'EducationLevel']</small></div>
   
   <div class="ct-line-down hide-mobile" style="height:20px"></div>
   <div class="hide-mobile" style="width: 50%; max-width: 300px; border-top: 2px solid #b0bec5; display:flex; justify-content: space-between;">
@@ -321,7 +321,7 @@ pipe[:<span class="num">2</span>]              <span class="cm"># slicing → re
      
      <!-- Categorical Branch -->
      <div class="ct-branch">
-        <div class="ct-branch-label">Categorical Pipeline<br><small>columns: ['Sex', 'Embarked']</small></div>
+        <div class="ct-branch-label">Categorical Pipeline<br><small>columns: ['Gender', 'EducationLevel']</small></div>
         <div class="pipe-step cat-step">
           <div class="step-icon">🏷️</div><div class="step-name">SimpleImputer</div><div class="step-type">strategy='most_frequent'</div>
         </div>
@@ -369,7 +369,7 @@ cat_pipe = <span class="cls">Pipeline</span>([
 preprocessor = <span class="cls">ColumnTransformer</span>(
     transformers=[
         (<span class="st">'num'</span>, num_pipe, [<span class="st">'Age'</span>, <span class="st">'Fare'</span>]),
-        (<span class="st">'cat'</span>, cat_pipe, [<span class="st">'Sex'</span>, <span class="st">'Embarked'</span>])
+        (<span class="st">'cat'</span>, cat_pipe, [<span class="st">'Gender'</span>, <span class="st">'EducationLevel'</span>])
     ])
 
 <span class="cm"># 3. Create the final pipeline</span>
