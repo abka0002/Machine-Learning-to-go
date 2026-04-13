@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Simulator — Retrieval-Augmented Generation Step-by-Step</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23faf9f5' stroke='%23e8e4d8'/><rect x='8' y='12' width='18' height='9' rx='2' fill='%2316653428' stroke='%23166534' stroke-width='2'/><rect x='8' y='24' width='18' height='9' rx='2' fill='%2316653428' stroke='%23166534' stroke-width='2'/><rect x='8' y='36' width='18' height='9' rx='2' fill='%2316653428' stroke='%23166534' stroke-width='2'/><circle cx='44' cy='32' r='13' fill='%23c2410c28' stroke='%23c2410c' stroke-width='2.5'/><line x1='30' y1='32' x2='34' y2='32' stroke='%2357534e' stroke-width='2'/></svg>">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Forest + Rust palette — earthy, library-ish, still light */
+  --bg:#faf9f5;--bg2:#f2efe5;--bg3:#ffffff;--bg4:#e8e4d8;
+  --border:#e0dcd0;--border2:#c8c3b3;
+  --txt:#1c1a15;--txt2:#57534e;--txt3:#8b8778;
+  /* Primary: forest green (accent) */
+  --acc:#166534;--accbg:#16653428;--accbrd:#16653490;
+  /* Secondary: rust (documents / retrieved chunks) */
+  --rust:#c2410c;--rustbg:#c2410c28;--rustbrd:#c2410c90;
+  /* Deep purple (query / embeddings) */
+  --purple:#7e22ce;--purplebg:#7e22ce28;--purplebrd:#7e22ce90;
+  /* Sky blue (scores / similarity) */
+  --sky:#0369a1;--skybg:#0369a128;--skybrd:#0369a190;
+  /* Stone gray (LLM / generic frames) */
+  --stone:#57534e;--stonebg:#57534e22;--stonebrd:#57534e80;
+  /* Warm yellow (warnings) */
+  --gold:#a16207;--goldbg:#a1620728;--goldbrd:#a1620790;
+  /* Red (failure modes) */
+  --red:#b91c1c;--redbg:#b91c1c22;--redbrd:#b91c1c80;
+  --on-acc:#ffffff;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;
+  --r:8px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--sans);background:var(--bg);color:var(--txt);line-height:1.6;min-height:100vh;}
+::selection{background:var(--acc);color:var(--on-acc);}
+.app{display:grid;grid-template-columns:240px 1fr;grid-template-rows:auto 1fr;min-height:100vh;}
+@media(max-width:860px){.app{grid-template-columns:1fr;}.sidebar{display:none;}}
+
+/* Header */
+.header{grid-column:1/-1;background:var(--bg2);border-bottom:1px solid var(--border);padding:0.7rem 1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+.logo{font-family:var(--mono);font-weight:500;font-size:0.85rem;color:var(--acc);letter-spacing:0.05em;display:flex;align-items:center;gap:0.55rem;}
+.logo-icon{width:26px;height:26px;flex-shrink:0;display:block;}
+.logo-suffix{color:var(--txt3);}
+.header-meta{font-size:0.7rem;color:var(--txt3);font-family:var(--mono);}
+.token-bar{display:flex;align-items:center;gap:0.5rem;margin-left:auto;flex-wrap:wrap;}
+.token-bar label{font-size:0.65rem;color:var(--txt3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;}
+.token-bar select{font-family:var(--mono);font-size:0.78rem;background:var(--bg3);color:var(--txt);border:1px solid var(--border);border-radius:6px;padding:0.3rem 0.5rem;cursor:pointer;max-width:200px;}
+.token-bar select:focus{outline:none;border-color:var(--acc);}
+.token-bar .val{font-family:var(--mono);font-size:0.74rem;color:var(--acc);font-weight:600;min-width:18px;text-align:center;}
+.token-bar .toggle{display:inline-flex;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:2px;gap:2px;}
+.token-bar .toggle button{font-family:var(--mono);font-size:0.7rem;padding:0.25rem 0.6rem;border:none;background:transparent;color:var(--txt3);border-radius:4px;cursor:pointer;font-weight:500;}
+.token-bar .toggle button.on{background:var(--acc);color:var(--on-acc);}
+
+/* Sidebar */
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:1rem 0;overflow-y:auto;}
+.side-label{font-family:var(--mono);font-size:0.58rem;color:var(--txt3);text-transform:uppercase;letter-spacing:0.08em;padding:0.5rem 1rem 0.3rem;font-weight:500;}
+.step-btn{display:flex;align-items:center;gap:0.6rem;width:100%;padding:0.45rem 1rem;border:none;background:none;color:var(--txt3);font-family:var(--sans);font-size:0.74rem;cursor:pointer;transition:all .12s;text-align:left;border-left:2px solid transparent;}
+.step-btn:hover{background:var(--bg3);color:var(--txt2);}
+.step-btn.on{background:var(--bg3);color:var(--acc);border-left-color:var(--acc);font-weight:600;}
+.step-btn.done{color:var(--txt2);}
+.step-num{font-family:var(--mono);font-size:0.62rem;width:20px;height:20px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:500;border:1px solid var(--border);}
+.step-btn.on .step-num{background:var(--acc);color:var(--on-acc);border-color:var(--acc);}
+.step-btn.done .step-num{background:var(--rust);color:var(--on-acc);border-color:var(--rust);}
+.step-divider{height:1px;background:var(--border);margin:0.5rem 1rem;}
+
+/* Main */
+.main{padding:1.5rem 2rem;overflow-y:auto;max-height:calc(100vh - 50px);}
+@media(max-width:860px){.main{padding:1rem;max-height:none;}}
+.stage-title{font-size:1.15rem;font-weight:700;letter-spacing:-0.02em;margin-bottom:0.15rem;}
+.stage-title .tag{font-family:var(--mono);font-size:0.6rem;font-weight:500;padding:0.15rem 0.45rem;border-radius:4px;margin-left:0.5rem;vertical-align:middle;}
+.tac{background:var(--accbg);color:var(--acc);border:1px solid var(--accbrd);}
+.tr{background:var(--rustbg);color:var(--rust);border:1px solid var(--rustbrd);}
+.tp{background:var(--purplebg);color:var(--purple);border:1px solid var(--purplebrd);}
+.ts{background:var(--skybg);color:var(--sky);border:1px solid var(--skybrd);}
+.tst{background:var(--stonebg);color:var(--stone);border:1px solid var(--stonebrd);}
+.tg{background:var(--goldbg);color:var(--gold);border:1px solid var(--goldbrd);}
+.trd{background:var(--redbg);color:var(--red);border:1px solid var(--redbrd);}
+.stage-desc{font-size:0.84rem;color:var(--txt2);max-width:720px;margin-bottom:1.2rem;line-height:1.7;}
+.stage-desc strong{color:var(--txt);font-weight:600;}
+
+/* Matrix / vector display */
+.mtx-wrap{margin:0.8rem 0;overflow-x:auto;}
+.mtx-row{display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;justify-content:center;}
+.mtx-block{display:inline-block;vertical-align:middle;margin:0.3rem;}
+.mtx-label{font-family:var(--mono);font-size:0.62rem;color:var(--txt3);text-align:center;margin-bottom:0.25rem;font-weight:500;letter-spacing:0.03em;}
+.mtx{border-collapse:separate;border-spacing:2px;font-family:var(--mono);font-size:0.72rem;}
+.mtx td{padding:0.25rem 0.4rem;text-align:center;background:var(--bg3);border:1px solid var(--border);min-width:46px;border-radius:3px;color:var(--txt2);}
+.mtx td.cp{background:var(--purplebg);color:var(--purple);border-color:var(--purplebrd);font-weight:500;}
+.mtx td.cr{background:var(--rustbg);color:var(--rust);border-color:var(--rustbrd);font-weight:500;}
+.mtx td.ca{background:var(--accbg);color:var(--acc);border-color:var(--accbrd);font-weight:500;}
+.mtx td.cs{background:var(--skybg);color:var(--sky);border-color:var(--skybrd);font-weight:500;}
+.mtx td.cheader{background:var(--bg4);color:var(--txt3);font-size:0.6rem;font-weight:500;border:none;}
+.op{font-family:var(--mono);font-size:1.2rem;color:var(--txt3);margin:0 0.4rem;vertical-align:middle;}
+
+/* Document corpus */
+.doc-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0.7rem;margin:0.9rem 0;}
+.doc-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:0.8rem 1rem;transition:all .15s;}
+.doc-card.retrieved{border-color:var(--rust);background:var(--rustbg);box-shadow:0 0 0 1px var(--rustbrd);}
+.doc-card.retrieved.top{border-color:var(--acc);background:var(--accbg);box-shadow:0 0 0 2px var(--accbrd);}
+.doc-id{font-family:var(--mono);font-size:0.6rem;color:var(--txt3);text-transform:uppercase;letter-spacing:0.05em;font-weight:500;margin-bottom:0.3rem;display:flex;justify-content:space-between;align-items:center;}
+.doc-id .score{color:var(--acc);font-weight:600;font-size:0.7rem;}
+.doc-text{font-size:0.78rem;color:var(--txt);line-height:1.55;}
+.doc-card.retrieved .doc-id{color:var(--rust);}
+.doc-card.retrieved.top .doc-id{color:var(--acc);}
+
+/* Info boxes */
+.info{padding:0.75rem 1rem;border-radius:var(--r);margin:0.7rem 0;font-size:0.82rem;line-height:1.65;}
+.info .il{font-family:var(--mono);font-size:0.6rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;}
+.iac{background:var(--accbg);border:1px solid var(--accbrd);}.iac .il{color:var(--acc);}
+.ir{background:var(--rustbg);border:1px solid var(--rustbrd);}.ir .il{color:var(--rust);}
+.ip{background:var(--purplebg);border:1px solid var(--purplebrd);}.ip .il{color:var(--purple);}
+.is{background:var(--skybg);border:1px solid var(--skybrd);}.is .il{color:var(--sky);}
+.ist{background:var(--stonebg);border:1px solid var(--stonebrd);}.ist .il{color:var(--stone);}
+.ig{background:var(--goldbg);border:1px solid var(--goldbrd);}.ig .il{color:var(--gold);}
+.ird{background:var(--redbg);border:1px solid var(--redbrd);}.ird .il{color:var(--red);}
+
+/* Formula bar */
+.formula{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:0.7rem 1rem;margin:0.7rem 0;font-family:var(--mono);font-size:0.78rem;color:var(--txt2);line-height:1.8;overflow-x:auto;}
+.formula .hl{color:var(--acc);font-weight:500;}
+.formula .cm{color:var(--txt3);}
+.formula .rust{color:var(--rust);font-weight:500;}
+.formula .purple{color:var(--purple);font-weight:500;}
+.formula .sky{color:var(--sky);font-weight:500;}
+
+/* Nav */
+.nav-row{display:flex;gap:0.6rem;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);}
+.nav-btn{font-family:var(--sans);font-size:0.78rem;font-weight:600;padding:0.5rem 1.2rem;border-radius:var(--r);border:none;cursor:pointer;transition:all .12s;letter-spacing:0.01em;}
+.nav-prev{background:var(--bg3);color:var(--txt2);border:1px solid var(--border);}.nav-prev:hover{border-color:var(--txt3);color:var(--txt);}
+.nav-next{background:var(--acc);color:var(--on-acc);}.nav-next:hover{filter:brightness(1.1);}
+.nav-btn:disabled{opacity:0.3;cursor:default;filter:none;}
+
+/* Config bar */
+.config{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:0.6rem 1rem;margin-bottom:1rem;display:flex;gap:1.2rem;flex-wrap:wrap;align-items:center;}
+.cfg-item{font-family:var(--mono);font-size:0.68rem;color:var(--txt3);}
+.cfg-item span{color:var(--acc);font-weight:500;}
+
+/* Architecture diagram */
+.arch-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem;margin:0.8rem 0 1.2rem;display:flex;justify-content:center;overflow-x:auto;}
+.arch-wrap svg{max-width:100%;height:auto;}
+
+/* Glossary table */
+.glossary{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin:0.8rem 0;}
+.glossary table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+.glossary th{background:var(--bg2);color:var(--txt3);font-family:var(--mono);font-weight:500;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.06em;text-align:left;padding:0.55rem 0.9rem;border-bottom:1px solid var(--border);}
+.glossary td{padding:0.55rem 0.9rem;border-bottom:1px solid var(--border);vertical-align:top;color:var(--txt2);line-height:1.55;}
+.glossary tr:last-child td{border-bottom:none;}
+.glossary tr:hover td{background:var(--bg2);}
+.glossary td.sym{font-family:var(--mono);font-weight:500;color:var(--acc);white-space:nowrap;width:1%;}
+.glossary td.val{font-family:var(--mono);color:var(--txt);font-weight:500;white-space:nowrap;width:1%;text-align:center;}
+.glossary td.def strong{color:var(--txt);font-weight:600;}
+.gloss-section{background:var(--bg4);color:var(--txt);font-family:var(--mono);font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;padding:0.5rem 0.9rem !important;}
+
+/* References */
+.refs{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:0.9rem 1.1rem;margin:0.8rem 0;}
+.refs ol{list-style:none;counter-reset:ref;padding:0;margin:0;}
+.refs li{counter-increment:ref;position:relative;padding:0.5rem 0 0.5rem 2.2rem;font-size:0.78rem;line-height:1.6;color:var(--txt2);border-bottom:1px solid var(--border);}
+.refs li:last-child{border-bottom:none;}
+.refs li::before{content:"["counter(ref)"]";position:absolute;left:0;top:0.5rem;font-family:var(--mono);font-size:0.7rem;color:var(--acc);font-weight:600;}
+.refs li .auth{color:var(--txt);font-weight:500;}
+.refs li .ttl{color:var(--txt);font-style:italic;}
+.refs li .ven{color:var(--txt3);font-family:var(--mono);font-size:0.72rem;}
+.refs li a{color:var(--acc);text-decoration:none;font-family:var(--mono);font-size:0.72rem;border-bottom:1px dotted var(--accbrd);}
+.refs li a:hover{border-bottom-style:solid;}
+
+/* Score bars */
+.bar-wrap{margin:0.3rem 0;}
+.bar-row{display:flex;align-items:center;gap:0.5rem;margin:0.25rem 0;font-family:var(--mono);font-size:0.72rem;}
+.bar-label{min-width:50px;color:var(--txt3);}
+.bar-track{flex:1;height:16px;background:var(--bg4);border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;transition:width .3s;}
+.bar-val{min-width:48px;text-align:right;color:var(--acc);font-weight:600;}
+
+/* Prompt box */
+.prompt-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.2rem;margin:0.8rem 0;font-family:var(--mono);font-size:0.78rem;line-height:1.7;color:var(--txt2);white-space:pre-wrap;}
+.prompt-box .sys{color:var(--stone);font-weight:500;}
+.prompt-box .ctx{color:var(--rust);background:var(--rustbg);padding:0 3px;border-radius:3px;}
+.prompt-box .q{color:var(--purple);font-weight:600;}
+.prompt-box .a{color:var(--acc);font-weight:600;}
+.prompt-box .label{font-size:0.6rem;color:var(--txt3);text-transform:uppercase;letter-spacing:0.06em;font-weight:500;font-family:var(--sans);display:block;margin-bottom:0.4rem;}
+
+/* Answer comparison */
+.answer-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin:0.8rem 0;}
+@media(max-width:680px){.answer-grid{grid-template-columns:1fr;}}
+.answer-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.2rem;}
+.answer-card.bad{border-color:var(--red);border-top:4px solid var(--red);}
+.answer-card.good{border-color:var(--acc);border-top:4px solid var(--acc);}
+.answer-card .lbl{font-family:var(--mono);font-size:0.6rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--txt3);margin-bottom:0.3rem;}
+.answer-card.bad .lbl{color:var(--red);}
+.answer-card.good .lbl{color:var(--acc);}
+.answer-card .txt{font-size:0.82rem;color:var(--txt);line-height:1.55;}
+
+/* Quiz */
+.quiz-q{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.2rem;margin:0.8rem 0;}
+.quiz-q .qnum{font-family:var(--mono);font-size:0.6rem;color:var(--acc);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;}
+.quiz-q .qtext{font-size:0.88rem;color:var(--txt);font-weight:500;margin:0.3rem 0 0.7rem;}
+.quiz-opt{display:block;width:100%;text-align:left;padding:0.55rem 0.9rem;margin:0.3rem 0;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--txt2);font-size:0.8rem;font-family:var(--sans);cursor:pointer;transition:all .12s;}
+.quiz-opt:hover{border-color:var(--acc);background:var(--accbg);}
+.quiz-opt.right{border-color:var(--acc);background:var(--accbg);color:var(--acc);font-weight:600;}
+.quiz-opt.wrong{border-color:var(--red);background:var(--redbg);color:var(--red);}
+.quiz-fb{margin-top:0.5rem;font-size:0.78rem;color:var(--txt2);padding:0.5rem 0.7rem;background:var(--bg2);border-radius:6px;display:none;}
+.quiz-fb.show{display:block;}
+
+/* 2D scatter plot wrapper */
+.scatter-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin:0.8rem 0;}
+.scatter-wrap svg{display:block;margin:0 auto;max-width:100%;height:auto;}
+.scatter-caption{font-size:0.75rem;color:var(--txt3);text-align:center;margin-top:0.5rem;font-style:italic;}
+
+/* Chunking demo */
+.chunk-demo{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.2rem;margin:0.8rem 0;}
+.chunk-meta{font-family:var(--mono);font-size:0.72rem;color:var(--txt2);margin-bottom:0.8rem;padding-bottom:0.6rem;border-bottom:1px solid var(--border);}
+.chunk-item{padding:0.6rem 0.8rem;margin:0.4rem 0;border-radius:4px;position:relative;}
+.chunk-label{font-family:var(--mono);font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.25rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;}
+.overlap-badge{font-family:var(--mono);font-size:0.58rem;background:var(--bg4);color:var(--txt3);padding:0.1rem 0.4rem;border-radius:3px;font-weight:500;}
+.chunk-text{font-size:0.78rem;color:var(--txt);line-height:1.55;}
+
+/* Inline sliders */
+.inline-slider{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:0.8rem 1.1rem;margin:0.7rem 0;display:flex;flex-wrap:wrap;gap:1.2rem;align-items:center;}
+.inline-slider .ctrl{display:flex;align-items:center;gap:0.5rem;}
+.inline-slider label{font-family:var(--mono);font-size:0.68rem;color:var(--txt3);text-transform:uppercase;letter-spacing:0.06em;}
+.inline-slider input[type=range]{width:140px;cursor:pointer;accent-color:var(--acc);}
+.inline-slider .val{font-family:var(--mono);font-size:0.78rem;color:var(--acc);font-weight:600;min-width:30px;text-align:center;}
+
+/* Bi-encoder vs cross-encoder comparison */
+.encoder-cmp{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0;}
+@media(max-width:780px){.encoder-cmp{grid-template-columns:1fr;}}
+.encoder-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.2rem;}
+.encoder-card.bi{border-top:4px solid var(--acc);}
+.encoder-card.cross{border-top:4px solid var(--rust);}
+.encoder-card h4{font-size:0.92rem;margin-bottom:0.4rem;}
+.encoder-card.bi h4{color:var(--acc);}
+.encoder-card.cross h4{color:var(--rust);}
+.encoder-card .tagline{font-size:0.75rem;color:var(--txt3);font-style:italic;margin-bottom:0.6rem;}
+.encoder-card .props{font-size:0.76rem;color:var(--txt2);line-height:1.65;}
+.encoder-card .props strong{color:var(--txt);font-weight:600;}
+.encoder-card svg{display:block;margin:0.5rem auto;}
+
+/* Rerank before/after */
+.rerank-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:0.8rem;align-items:start;margin:0.8rem 0;}
+@media(max-width:780px){.rerank-grid{grid-template-columns:1fr;}.rerank-arrow{display:none;}}
+.rerank-col{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:0.9rem 1rem;}
+.rerank-col.before{border-top:3px solid var(--stone);}
+.rerank-col.after{border-top:3px solid var(--acc);}
+.rerank-col h4{font-size:0.82rem;margin-bottom:0.5rem;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;}
+.rerank-col.before h4{color:var(--stone);}
+.rerank-col.after h4{color:var(--acc);}
+.rerank-item{padding:0.4rem 0.6rem;margin:0.25rem 0;border-radius:4px;background:var(--bg);border:1px solid var(--border);font-size:0.74rem;display:flex;align-items:center;gap:0.5rem;}
+.rerank-item .rank{font-family:var(--mono);font-weight:700;color:var(--txt3);width:20px;}
+.rerank-item .id{font-family:var(--mono);color:var(--txt2);}
+.rerank-item .score{margin-left:auto;font-family:var(--mono);font-size:0.7rem;color:var(--acc);font-weight:600;}
+.rerank-item.moved-up{background:var(--accbg);border-color:var(--accbrd);}
+.rerank-item.moved-down{background:var(--bg2);color:var(--txt3);opacity:0.7;}
+.rerank-arrow{font-size:1.6rem;color:var(--rust);align-self:center;text-align:center;font-weight:700;}
+
+/* Latency chart */
+.latency-chart{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.2rem;margin:0.8rem 0;}
+.lat-row{display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0;font-family:var(--mono);font-size:0.72rem;}
+.lat-label{min-width:100px;color:var(--txt3);}
+.lat-bar{flex:1;height:20px;background:var(--bg4);border-radius:4px;overflow:hidden;position:relative;}
+.lat-fill{height:100%;border-radius:3px;transition:width .3s;}
+.lat-val{min-width:80px;text-align:right;color:var(--txt2);font-weight:500;}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="header">
+  <div class="logo">
+    <svg class="logo-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect width="64" height="64" rx="14" fill="#faf9f5" stroke="#e8e4d8" stroke-width="1"/>
+      <rect x="8" y="12" width="18" height="9" rx="2" fill="#16653428" stroke="#166534" stroke-width="2"/>
+      <rect x="8" y="24" width="18" height="9" rx="2" fill="#16653428" stroke="#166534" stroke-width="2"/>
+      <rect x="8" y="36" width="18" height="9" rx="2" fill="#16653428" stroke="#166534" stroke-width="2"/>
+      <circle cx="44" cy="32" r="13" fill="#c2410c28" stroke="#c2410c" stroke-width="2.5"/>
+      <line x1="30" y1="32" x2="34" y2="32" stroke="#57534e" stroke-width="2"/>
+    </svg>
+    <span>RAG_SYS<span class="logo-suffix">.sim</span></span>
+  </div>
+  <div class="header-meta">retrieval-augmented generation · step-by-step</div>
+  <div class="token-bar">
+    <label>Query</label>
+    <select id="query-select" onchange="onQueryChange()">
+      <option value="0">What is LoRA?</option>
+      <option value="1">Who wrote "Attention Is All You Need"?</option>
+      <option value="2">What is the capital of France?</option>
+      <option value="3">How does cosine similarity work?</option>
+    </select>
+    <label style="margin-left:0.5rem;">top-k</label>
+    <input id="k-slider" type="range" min="1" max="5" step="1" value="3" oninput="onKChange()" style="width:80px;accent-color:var(--acc);">
+    <span class="val" id="k-val">3</span>
+  </div>
+</header>
+
+<aside class="sidebar" id="sidebar"></aside>
+<div class="main" id="main-content"></div>
+</div>
+
+<script>
+// ═══════ CORPUS ═══════
+// Hand-crafted 8-dim embeddings designed so topically related chunks cluster together.
+// In reality these would come from a model like all-MiniLM-L6-v2 (384 dims) or OpenAI text-embedding-3-small (1536 dims).
+// Each embedding is L2-normalized so cosine similarity = dot product.
+// We build non-normalized vectors here and normalize at load time.
+const RAW_CORPUS = [
+  // ── Cluster 1: LoRA / fine-tuning (strong in dims 0,1) ──
+  {id: 'doc_01', text: "LoRA (Low-Rank Adaptation) freezes the pre-trained model weights and injects trainable low-rank matrices into each layer. It drastically reduces the number of trainable parameters needed for fine-tuning.",
+   vec: [ 0.90,  0.75,  0.05, -0.05,  0.05,  0.00,  0.05,  0.05]},
+  {id: 'doc_02', text: "The LoRA paper by Hu et al. (2021) showed that adaptation updates have low intrinsic rank. By decomposing the update as the product of two small matrices A and B, you can fine-tune large models with 10,000× fewer parameters.",
+   vec: [ 0.85,  0.80,  0.00, -0.05,  0.00, -0.05,  0.05,  0.00]},
+  {id: 'doc_03', text: "Parameter-efficient fine-tuning methods like adapters, prefix-tuning, and LoRA avoid updating the full weight matrix during adaptation. They are essential for running many fine-tuned variants of a large base model.",
+   vec: [ 0.80,  0.70,  0.05,  0.00,  0.05,  0.00,  0.00, -0.05]},
+
+  // ── Cluster 2: Transformers / attention (strong in dims 2,3) ──
+  {id: 'doc_04', text: "The Transformer architecture, introduced by Vaswani et al. in 'Attention Is All You Need' (2017), replaced recurrent networks with pure self-attention for sequence modeling tasks.",
+   vec: [ 0.05,  0.00,  0.90,  0.75,  0.00, -0.05,  0.05, -0.05]},
+  {id: 'doc_05', text: "Self-attention computes a weighted sum over a sequence where the weights are determined by the similarity between a query vector and a set of key vectors. The output is a weighted combination of the value vectors.",
+   vec: [ 0.00, -0.05,  0.85,  0.80,  0.05,  0.00,  0.00, -0.05]},
+  {id: 'doc_06', text: "Vaswani, Shazeer, Parmar, and others at Google Brain published 'Attention Is All You Need' at NeurIPS 2017. The paper introduced the encoder-decoder Transformer for machine translation.",
+   vec: [ 0.05,  0.00,  0.80,  0.70,  0.00, -0.05,  0.05,  0.00]},
+
+  // ── Cluster 3: Geography / world facts (strong in dims 4,5) ──
+  {id: 'doc_07', text: "Paris is the capital and most populous city of France, located on the Seine River in the north of the country. It has been a major European cultural, political, and economic center for centuries.",
+   vec: [ 0.00, -0.05,  0.05, -0.05,  0.90,  0.75,  0.05,  0.00]},
+  {id: 'doc_08', text: "France is a country in Western Europe. Its capital, Paris, is home to landmarks such as the Eiffel Tower, the Louvre Museum, and Notre-Dame Cathedral. The country has a population of about 68 million.",
+   vec: [ 0.05,  0.00,  0.00, -0.05,  0.85,  0.80,  0.00,  0.05]},
+
+  // ── Cluster 4: Vector similarity / embeddings (strong in dims 6,7) ──
+  {id: 'doc_09', text: "Cosine similarity measures the angle between two vectors, ignoring their magnitude. It equals the dot product of the two vectors divided by the product of their Euclidean norms, and ranges from -1 to 1.",
+   vec: [ 0.05,  0.00, -0.05,  0.05,  0.00, -0.05,  0.90,  0.75]},
+  {id: 'doc_10', text: "In information retrieval, documents and queries are embedded into a high-dimensional vector space, and similarity search returns the documents whose embeddings are closest to the query embedding under cosine similarity.",
+   vec: [ 0.00,  0.05, -0.05,  0.00,  0.05,  0.00,  0.85,  0.80]},
+];
+
+// ═══════ QUERIES ═══════
+// Each query's vector points into its target cluster's dimensions.
+const QUERIES = [
+  {
+    text: "What is LoRA?",
+    vec: [ 0.88,  0.78,  0.00, -0.05,  0.00,  0.00,  0.05,  0.00],
+    topic: "LoRA fine-tuning",
+    withRag: "LoRA (Low-Rank Adaptation) is a parameter-efficient fine-tuning method that freezes the pre-trained model weights and learns a small low-rank update represented as the product of two trainable matrices A and B. According to Hu et al. (2021), this reduces the number of trainable parameters by up to 10,000× compared to full fine-tuning [doc_01, doc_02].",
+    withoutRag: "LoRA could refer to several things — a messaging protocol for IoT devices (LoRaWAN), a character name, or possibly a machine learning technique. Without more context, I can't give you a specific answer.",
+    truthful: true
+  },
+  {
+    text: "Who wrote 'Attention Is All You Need'?",
+    vec: [ 0.00, -0.05,  0.88,  0.78,  0.00,  0.00,  0.00,  0.00],
+    topic: "Transformers",
+    withRag: "'Attention Is All You Need' was written by Vaswani, Shazeer, Parmar, and their colleagues at Google Brain, and was published at NeurIPS 2017. The paper introduced the Transformer architecture, which replaced recurrent networks with pure self-attention [doc_06, doc_04].",
+    withoutRag: "'Attention Is All You Need' was a 2017 paper by researchers at Google. I believe the first author was Ashish Vaswani, but I'm not certain about the full author list from memory.",
+    truthful: true
+  },
+  {
+    text: "What is the capital of France?",
+    vec: [ 0.00,  0.00,  0.00,  0.00,  0.88,  0.78,  0.00,  0.00],
+    topic: "Geography",
+    withRag: "The capital of France is Paris. Paris is located on the Seine River in northern France and has been a major European cultural, political, and economic center for centuries [doc_07, doc_08].",
+    withoutRag: "The capital of France is Paris.",
+    truthful: true
+  },
+  {
+    text: "How does cosine similarity work?",
+    vec: [ 0.05,  0.00,  0.00,  0.00,  0.00,  0.00,  0.88,  0.78],
+    topic: "Vector similarity",
+    withRag: "Cosine similarity measures the angle between two vectors, ignoring their magnitude. It is computed as the dot product of the two vectors divided by the product of their Euclidean norms, yielding a value between -1 and 1. In information retrieval, it's the standard way to find documents whose embeddings are closest to a query embedding [doc_09, doc_10].",
+    withoutRag: "Cosine similarity is a measure of similarity between two non-zero vectors based on the angle between them. It is calculated as cos(θ) = (A · B) / (||A|| ||B||).",
+    truthful: true
+  },
+];
+
+// ═══════ MATH UTILITIES ═══════
+function dot(a, b) { return a.reduce((s, x, i) => s + x * b[i], 0); }
+function norm(v) { return Math.sqrt(v.reduce((s, x) => s + x * x, 0)); }
+function normalize(v) {
+  const n = norm(v);
+  return v.map(x => +(x / n).toFixed(4));
+}
+function cosine(a, b) {
+  // For L2-normalized vectors, cosine = dot product
+  return +(dot(a, b) / (norm(a) * norm(b))).toFixed(4);
+}
+
+// Normalize all corpus embeddings once at load time
+const CORPUS = RAW_CORPUS.map(d => ({...d, vec: normalize(d.vec)}));
+const NORMALIZED_QUERIES = QUERIES.map(q => ({...q, vec: normalize(q.vec)}));
+
+// ═══════ 2D projection for visualization ═══════
+// We use a deterministic "semantic projection" rather than PCA: each cluster's
+// natural axis in the 8-dim embedding space becomes a compass direction in 2D.
+// This guarantees the 4 clusters land at 4 distinct compass points, making the
+// visualization much clearer than PCA would for this toy corpus.
+//
+// Axis choice:
+//   PC1 (x) = (dims 0+1 contribution) − (dims 2+3 contribution)
+//               LoRA →  +x            Transformers →  −x
+//   PC2 (y) = (dims 4+5 contribution) − (dims 6+7 contribution)
+//               Geography →  +y        Vector similarity →  −y
+function computePCA2D() {
+  const project = v => {
+    const x = (v[0] + v[1]) - (v[2] + v[3]);  // LoRA vs Transformers
+    const y = (v[4] + v[5]) - (v[6] + v[7]);  // Geography vs Similarity
+    // Scale down so points fit comfortably in the plot
+    return [x * 0.7, y * 0.7];
+  };
+  return {
+    corpus2d: CORPUS.map(d => ({...d, xy: project(d.vec)})),
+    queries2d: NORMALIZED_QUERIES.map(q => ({...q, xy: project(q.vec)})),
+    project,
+  };
+}
+
+const PCA = computePCA2D();
+
+// ═══════ STATE ═══════
+let QUERY_IDX = 0;
+let TOP_K = 3;
+let CHUNK_SIZE = 50;   // Demo chunk size (chars) for the chunking interactive
+let CHUNK_OVERLAP = 10;
+
+function computeRetrieval() {
+  const q = NORMALIZED_QUERIES[QUERY_IDX];
+  const scored = CORPUS.map(d => ({
+    id: d.id,
+    text: d.text,
+    vec: d.vec,
+    score: cosine(q.vec, d.vec)
+  })).sort((a, b) => b.score - a.score);
+  const retrieved = scored.slice(0, TOP_K);
+  return { query: q, scored, retrieved };
+}
+
+// ═══════ RENDERING HELPERS ═══════
+function fmt(v, dec = 3) {
+  if (v === 0) return '0.000';
+  return typeof v === 'number' ? v.toFixed(dec) : v;
+}
+
+function renderVec(v, label, cls) {
+  let h = `<div class="mtx-block"><div class="mtx-label">${label}</div><table class="mtx"><tr>`;
+  v.forEach(x => h += `<td class="${cls}">${fmt(x)}</td>`);
+  h += '</tr></table></div>';
+  return h;
+}
+
+function renderDoc(doc, opts = {}) {
+  const cls = ['doc-card'];
+  if (opts.retrieved) cls.push('retrieved');
+  if (opts.top) cls.push('top');
+  const score = opts.score !== undefined ? `<span class="score">sim: ${fmt(opts.score)}</span>` : '';
+  return `<div class="${cls.join(' ')}">
+<div class="doc-id"><span>${doc.id}${opts.rank !== undefined ? ` · rank ${opts.rank + 1}` : ''}</span>${score}</div>
+<div class="doc-text">${doc.text}</div>
+</div>`;
+}
+
+// ═══════ 2D VECTOR SPACE SCATTER PLOT ═══════
+// Renders the PCA-projected corpus and current query in a zoomable SVG.
+// Options: { showSimLines: bool, highlightTopK: bool, showLabels: bool }
+function renderScatter2D(opts = {}) {
+  const {query, scored} = computeRetrieval();
+  const topKIds = new Set(scored.slice(0, TOP_K).map(s => s.id));
+  const W = 620, H = 420, PAD = 40;
+  // Find bounds across corpus + all queries
+  const allXY = [...PCA.corpus2d.map(d => d.xy), ...PCA.queries2d.map(q => q.xy)];
+  const xs = allXY.map(p => p[0]), ys = allXY.map(p => p[1]);
+  const xmin = Math.min(...xs), xmax = Math.max(...xs);
+  const ymin = Math.min(...ys), ymax = Math.max(...ys);
+  const xrange = xmax - xmin || 1, yrange = ymax - ymin || 1;
+  const sx = x => PAD + ((x - xmin) / xrange) * (W - 2 * PAD);
+  const sy = y => (H - PAD) - ((y - ymin) / yrange) * (H - 2 * PAD);
+
+  // Topic colors — distinct from the forest-green retrieval highlight color so that
+  // "highlighted" and "belongs to cluster X" don't visually conflict
+  const topicColors = {
+    'LoRA fine-tuning': '#be123c',    // rose
+    'Transformers': '#0369a1',         // sky blue
+    'Geography': '#a16207',            // amber
+    'Vector similarity': '#7e22ce',    // purple
+  };
+  const docTopics = ['LoRA fine-tuning','LoRA fine-tuning','LoRA fine-tuning','Transformers','Transformers','Transformers','Geography','Geography','Vector similarity','Vector similarity'];
+
+  // Current query in 2D
+  const qXY = PCA.queries2d[QUERY_IDX].xy;
+  const qx = sx(qXY[0]), qy = sy(qXY[1]);
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="DM Sans, sans-serif" style="max-width:100%;height:auto;">`;
+  // Background grid
+  svg += `<rect width="${W}" height="${H}" fill="#ffffff"/>`;
+  for (let i = 0; i <= 10; i++) {
+    const gx = PAD + (i / 10) * (W - 2 * PAD);
+    const gy = PAD + (i / 10) * (H - 2 * PAD);
+    svg += `<line x1="${gx}" y1="${PAD}" x2="${gx}" y2="${H - PAD}" stroke="#f2efe5" stroke-width="1"/>`;
+    svg += `<line x1="${PAD}" y1="${gy}" x2="${W - PAD}" y2="${gy}" stroke="#f2efe5" stroke-width="1"/>`;
+  }
+  // Axes
+  svg += `<line x1="${PAD}" y1="${H - PAD}" x2="${W - PAD}" y2="${H - PAD}" stroke="#c8c3b3" stroke-width="1.5"/>`;
+  svg += `<line x1="${PAD}" y1="${PAD}" x2="${PAD}" y2="${H - PAD}" stroke="#c8c3b3" stroke-width="1.5"/>`;
+  svg += `<text x="${W - PAD}" y="${H - PAD + 20}" text-anchor="end" font-size="10" fill="#8b8778" font-family="DM Mono, monospace">PC1</text>`;
+  svg += `<text x="${PAD - 6}" y="${PAD + 8}" text-anchor="end" font-size="10" fill="#8b8778" font-family="DM Mono, monospace">PC2</text>`;
+
+  // Similarity lines from query to all docs (if enabled)
+  if (opts.showSimLines !== false) {
+    scored.forEach(s => {
+      const doc = PCA.corpus2d.find(d => d.id === s.id);
+      const dx = sx(doc.xy[0]), dy = sy(doc.xy[1]);
+      // Line opacity and thickness scale with similarity
+      const sim = Math.max(0, s.score);
+      const width = 0.5 + sim * 3;
+      const opacity = 0.15 + sim * 0.7;
+      const isTop = topKIds.has(s.id);
+      const color = isTop ? '#166534' : '#8b8778';
+      const dash = isTop ? '' : 'stroke-dasharray="2 3"';
+      svg += `<line x1="${qx}" y1="${qy}" x2="${dx}" y2="${dy}" stroke="${color}" stroke-width="${width}" opacity="${opacity}" ${dash}/>`;
+    });
+  }
+
+  // Corpus points
+  PCA.corpus2d.forEach((d, i) => {
+    const cx = sx(d.xy[0]), cy = sy(d.xy[1]);
+    const topic = docTopics[i];
+    const color = topicColors[topic];
+    const isTop = topKIds.has(d.id);
+    const rank = scored.findIndex(s => s.id === d.id);
+    const r = isTop ? 10 : 7;
+    const stroke = isTop ? '#166534' : color;
+    const strokeW = isTop ? 3 : 1.5;
+    svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" fill-opacity="0.18" stroke="${stroke}" stroke-width="${strokeW}"/>`;
+    if (opts.showLabels !== false) {
+      svg += `<text x="${cx}" y="${cy - r - 4}" text-anchor="middle" font-size="9" fill="${color}" font-weight="600" font-family="DM Mono, monospace">${d.id}</text>`;
+      if (isTop && opts.showRanks) {
+        svg += `<text x="${cx}" y="${cy + 3}" text-anchor="middle" font-size="10" fill="${stroke}" font-weight="700">${rank + 1}</text>`;
+      }
+    }
+  });
+
+  // Query point (star-like, on top)
+  svg += `<circle cx="${qx}" cy="${qy}" r="13" fill="#7e22ce" fill-opacity="0.25" stroke="#7e22ce" stroke-width="3"/>`;
+  svg += `<circle cx="${qx}" cy="${qy}" r="5" fill="#7e22ce"/>`;
+  svg += `<text x="${qx}" y="${qy - 18}" text-anchor="middle" font-size="11" fill="#7e22ce" font-weight="700">QUERY</text>`;
+  svg += `<text x="${qx}" y="${qy + 28}" text-anchor="middle" font-size="9" fill="#7e22ce" font-style="italic">"${query.text}"</text>`;
+
+  // Legend (lower-left — avoids clusters)
+  const legX = PAD + 12, legY = H - PAD - 78;
+  svg += `<rect x="${legX - 6}" y="${legY - 14}" width="152" height="82" fill="#ffffff" stroke="#e0dcd0" stroke-width="1" rx="4"/>`;
+  svg += `<text x="${legX}" y="${legY}" font-size="9" fill="#8b8778" font-family="DM Mono, monospace" text-transform="uppercase">Topic clusters</text>`;
+  Object.entries(topicColors).forEach(([name, color], i) => {
+    const ly = legY + 14 + i * 13;
+    svg += `<circle cx="${legX + 6}" cy="${ly - 3}" r="4" fill="${color}" fill-opacity="0.3" stroke="${color}" stroke-width="1.5"/>`;
+    svg += `<text x="${legX + 16}" y="${ly}" font-size="9" fill="#57534e">${name}</text>`;
+  });
+
+  svg += `</svg>`;
+  return svg;
+}
+
+// ═══════ CHUNKING DEMO RENDERER ═══════
+// Shows a sample paragraph split into chunks with given size/overlap.
+const CHUNKING_DEMO_TEXT =
+  "Low-Rank Adaptation (LoRA) is a parameter-efficient fine-tuning technique for large language models. It freezes the pretrained weights and injects trainable low-rank decomposition matrices into each transformer layer. This dramatically reduces the number of trainable parameters while preserving model quality. The method was introduced by Hu et al. in 2021 at Microsoft Research.";
+
+function renderChunkingDemo(size, overlap) {
+  const text = CHUNKING_DEMO_TEXT;
+  const chunks = [];
+  let start = 0;
+  while (start < text.length) {
+    const end = Math.min(start + size, text.length);
+    chunks.push({ start, end, text: text.slice(start, end) });
+    if (end >= text.length) break;
+    start += (size - overlap);
+  }
+  // Render each chunk as a colored strip
+  let h = `<div class="chunk-demo">`;
+  h += `<div class="chunk-meta"><strong>${chunks.length}</strong> chunks of <strong>${size}</strong> chars with <strong>${overlap}</strong> chars overlap</div>`;
+  const palette = ['#16653428','#0369a128','#c2410c28','#7e22ce28','#a1620728','#0e749028'];
+  const borders = ['#166534','#0369a1','#c2410c','#7e22ce','#a16207','#0e7490'];
+  chunks.forEach((c, i) => {
+    const color = palette[i % palette.length];
+    const border = borders[i % borders.length];
+    const hasOverlapLeft = i > 0;
+    const overlapBadge = hasOverlapLeft ? `<span class="overlap-badge">↶ overlap ${overlap}</span>` : '';
+    h += `<div class="chunk-item" style="background:${color};border-left:3px solid ${border};">
+<div class="chunk-label" style="color:${border};">chunk ${i + 1} · chars [${c.start}, ${c.end}) ${overlapBadge}</div>
+<div class="chunk-text">${c.text}</div>
+</div>`;
+  });
+  h += `</div>`;
+  return h;
+}
+
+// ═══════ STEP DEFINITIONS ═══════
+const STEPS = [
+
+// ───────────────────── 1. OVERVIEW ─────────────────────
+{id: 'overview', title: 'Overview', group: 'Setup',
+render() {
+  let h = `<div class="stage-title">RAG: Retrieval-Augmented Generation <span class="tag tac">OVERVIEW</span></div>`;
+  h += `<p class="stage-desc"><strong>Retrieval-Augmented Generation</strong> (Lewis et al. 2020 [1]) combines a frozen language model with an external document retriever. Instead of relying only on what the model memorized during pre-training, the system first <em>fetches</em> relevant passages from a knowledge base and then <em>generates</em> an answer conditioned on them. This grounds the output in verifiable sources and lets the model access information that changed after its training cutoff.</p>`;
+
+  h += `<div class="info iac"><div class="il">The core idea in one line</div>
+Instead of asking the LLM to answer from memory, <strong>look up relevant passages first, then stuff them into the prompt as context</strong>. The LLM becomes a reading-comprehension engine over a live corpus rather than a static knowledge database.
+<div class="formula" style="margin:0.6rem 0;">answer = LLM( <span class="purple">query</span> + <span class="rust">retrieved_passages</span>(query) )</div></div>`;
+
+  // Architecture SVG
+  h += `<div class="arch-wrap">
+<svg viewBox="0 0 640 400" xmlns="http://www.w3.org/2000/svg" font-family="DM Sans, sans-serif">
+  <defs>
+    <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b8778"/>
+    </marker>
+  </defs>
+
+  <!-- Query box -->
+  <rect x="20" y="20" width="140" height="50" rx="8" fill="#7e22ce28" stroke="#7e22ce" stroke-width="2"/>
+  <text x="90" y="42" text-anchor="middle" font-size="12" fill="#7e22ce" font-weight="700">User Query</text>
+  <text x="90" y="58" text-anchor="middle" font-size="10" fill="#57534e" font-family="DM Mono, monospace">"What is LoRA?"</text>
+
+  <!-- Arrow to embed -->
+  <line x1="160" y1="45" x2="200" y2="45" stroke="#8b8778" stroke-width="2" marker-end="url(#arrR)"/>
+
+  <!-- Query embed -->
+  <rect x="200" y="20" width="140" height="50" rx="8" fill="#7e22ce28" stroke="#7e22ce" stroke-width="2"/>
+  <text x="270" y="42" text-anchor="middle" font-size="12" fill="#7e22ce" font-weight="700">Query Embedding</text>
+  <text x="270" y="58" text-anchor="middle" font-size="10" fill="#57534e" font-family="DM Mono, monospace">q_vec [d]</text>
+
+  <!-- Arrow to retriever -->
+  <line x1="340" y1="45" x2="380" y2="45" stroke="#8b8778" stroke-width="2" marker-end="url(#arrR)"/>
+
+  <!-- Retriever / vector DB -->
+  <rect x="380" y="20" width="240" height="170" rx="10" fill="#c2410c22" stroke="#c2410c" stroke-width="2"/>
+  <text x="500" y="42" text-anchor="middle" font-size="12" fill="#c2410c" font-weight="700">Vector Database</text>
+  <text x="500" y="56" text-anchor="middle" font-size="9" fill="#57534e" font-style="italic">cosine similarity search</text>
+
+  <!-- Document chunks inside -->
+  <rect x="395" y="70" width="210" height="22" rx="4" fill="#ffffff" stroke="#c2410c" stroke-width="1"/>
+  <text x="405" y="85" font-size="9" fill="#57534e" font-family="DM Mono, monospace">doc_01: "LoRA freezes..."</text>
+  <rect x="395" y="96" width="210" height="22" rx="4" fill="#ffffff" stroke="#c2410c" stroke-width="1"/>
+  <text x="405" y="111" font-size="9" fill="#57534e" font-family="DM Mono, monospace">doc_02: "Hu et al. 2021..."</text>
+  <rect x="395" y="122" width="210" height="22" rx="4" fill="#ffffff" stroke="#c2410c" stroke-width="1"/>
+  <text x="405" y="137" font-size="9" fill="#57534e" font-family="DM Mono, monospace">doc_03: "PEFT methods..."</text>
+  <text x="500" y="162" text-anchor="middle" font-size="9" fill="#8b8778" font-style="italic">... N chunks total</text>
+
+  <!-- Top-k retrieved arrow down -->
+  <line x1="500" y1="195" x2="500" y2="230" stroke="#c2410c" stroke-width="2" marker-end="url(#arrR)"/>
+  <text x="510" y="215" font-size="10" fill="#c2410c" font-family="DM Mono, monospace">top-k</text>
+
+  <!-- Retrieved chunks -->
+  <rect x="380" y="230" width="240" height="55" rx="8" fill="#c2410c28" stroke="#c2410c" stroke-width="2"/>
+  <text x="500" y="250" text-anchor="middle" font-size="11" fill="#c2410c" font-weight="700">Retrieved Passages</text>
+  <text x="500" y="268" text-anchor="middle" font-size="9" fill="#57534e" font-family="DM Mono, monospace">[doc_01, doc_02, doc_03]</text>
+
+  <!-- Arrow from retrieved + from query to prompt -->
+  <line x1="380" y1="258" x2="270" y2="300" stroke="#8b8778" stroke-width="1.5" marker-end="url(#arrR)"/>
+  <line x1="90" y1="70" x2="200" y2="300" stroke="#8b8778" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#arrR)"/>
+
+  <!-- Augmented prompt -->
+  <rect x="170" y="305" width="300" height="40" rx="8" fill="#57534e22" stroke="#57534e" stroke-width="2"/>
+  <text x="320" y="323" text-anchor="middle" font-size="12" fill="#57534e" font-weight="700">Augmented Prompt</text>
+  <text x="320" y="337" text-anchor="middle" font-size="9" fill="#57534e" font-family="DM Mono, monospace">system + context + query</text>
+
+  <!-- Arrow to LLM -->
+  <line x1="320" y1="345" x2="320" y2="365" stroke="#8b8778" stroke-width="2" marker-end="url(#arrR)"/>
+
+  <!-- LLM final -->
+  <rect x="190" y="365" width="260" height="30" rx="8" fill="#16653428" stroke="#166534" stroke-width="2.5"/>
+  <text x="320" y="385" text-anchor="middle" font-size="12" fill="#166534" font-weight="700">LLM → Grounded Answer</text>
+</svg>
+</div>`;
+
+  // Contrast: closed-book vs RAG
+  h += `<h3 style="margin-top:1.2rem;font-size:0.95rem;color:var(--txt);">Without RAG vs. with RAG</h3>`;
+  h += `<div class="answer-grid">
+<div class="answer-card bad">
+<div class="lbl">Closed-book LLM</div>
+<div class="txt"><em>"What's Anthropic's revenue for Q4 2025?"</em> → Model either hallucinates a plausible-sounding number or says "I don't know" because the data is after its training cutoff. No source to verify against.</div>
+</div>
+<div class="answer-card good">
+<div class="lbl">With RAG</div>
+<div class="txt"><em>"What's Anthropic's revenue for Q4 2025?"</em> → System first retrieves recent press releases and financial docs, then generates an answer <strong>quoting and citing them</strong>. Fresh, grounded, verifiable.</div>
+</div>
+</div>`;
+
+  // Variables glossary
+  h += `<div class="stage-title" style="margin-top:1.2rem">Variables & Hyperparameters</div>`;
+  h += `<p class="stage-desc">Every symbol used in the simulator, with its meaning and the current value.</p>`;
+  h += `<div class="glossary"><table>
+<tr><th>Symbol</th><th>Value</th><th>Meaning</th></tr>
+
+<tr><td colspan="3" class="gloss-section">Corpus & chunks</td></tr>
+<tr><td class="sym">N</td><td class="val">${CORPUS.length}</td><td class="def"><strong>Corpus size.</strong> Number of document chunks in the vector database. Real systems have thousands to billions.</td></tr>
+<tr><td class="sym">d</td><td class="val">${CORPUS[0].vec.length}</td><td class="def"><strong>Embedding dimension.</strong> Length of each vector. Here we use 8 so they fit on screen; real models use 384 (MiniLM), 768 (BERT), 1536 (OpenAI text-embedding-3-small), or 3072 (OpenAI text-embedding-3-large).</td></tr>
+<tr><td class="sym">chunk</td><td class="val">—</td><td class="def"><strong>A single passage</strong> of text stored in the corpus. Typically 200–500 tokens. The unit of retrieval.</td></tr>
+
+<tr><td colspan="3" class="gloss-section">Retrieval</td></tr>
+<tr><td class="sym">q</td><td class="val">—</td><td class="def"><strong>User query</strong> text. The question to be answered.</td></tr>
+<tr><td class="sym">q_vec</td><td class="val">[d]</td><td class="def"><strong>Query embedding.</strong> The query text passed through the same embedding model as the corpus.</td></tr>
+<tr><td class="sym">sim(q, d)</td><td class="val">∈ [-1, 1]</td><td class="def"><strong>Cosine similarity</strong> between the query embedding and a document embedding. Higher = more relevant.</td></tr>
+<tr><td class="sym">k</td><td class="val">${TOP_K}</td><td class="def"><strong>Number of retrieved passages.</strong> The k documents with highest similarity are passed to the LLM. Adjustable via the slider in the header.</td></tr>
+
+<tr><td colspan="3" class="gloss-section">Generation</td></tr>
+<tr><td class="sym">context</td><td class="val">—</td><td class="def"><strong>The retrieved passages</strong> inserted into the prompt before the query.</td></tr>
+<tr><td class="sym">prompt</td><td class="val">—</td><td class="def"><strong>The full augmented prompt</strong> sent to the LLM: system instructions + context + user query.</td></tr>
+<tr><td class="sym">answer</td><td class="val">—</td><td class="def"><strong>The generated response</strong>, ideally grounded in the retrieved context and citing specific passages.</td></tr>
+</table></div>`;
+
+  // References
+  h += `<div class="stage-title" style="margin-top:1.2rem">Scientific References</div>`;
+  h += `<div class="refs"><ol>
+<li><span class="auth">Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., Küttler, H., Lewis, M., Yih, W.-t., Rocktäschel, T., Riedel, S., &amp; Kiela, D.</span> (2020). <span class="ttl">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.</span> <span class="ven">Advances in Neural Information Processing Systems (NeurIPS) 33.</span> <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener">arXiv:2005.11401</a><br><em>The original RAG paper. Introduces the formal combination of a dense retriever (DPR) with a seq2seq generator (BART) for open-domain question answering.</em></li>
+
+<li><span class="auth">Karpukhin, V., Oğuz, B., Min, S., Lewis, P., Wu, L., Edunov, S., Chen, D., &amp; Yih, W.-t.</span> (2020). <span class="ttl">Dense Passage Retrieval for Open-Domain Question Answering.</span> <span class="ven">Empirical Methods in Natural Language Processing (EMNLP).</span> <a href="https://arxiv.org/abs/2004.04906" target="_blank" rel="noopener">arXiv:2004.04906</a><br><em>Introduces DPR, the dense bi-encoder retriever that became the standard for RAG systems. Uses two BERT encoders (one for questions, one for passages) trained contrastively.</em></li>
+
+<li><span class="auth">Reimers, N., &amp; Gurevych, I.</span> (2019). <span class="ttl">Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks.</span> <span class="ven">Empirical Methods in Natural Language Processing (EMNLP).</span> <a href="https://arxiv.org/abs/1908.10084" target="_blank" rel="noopener">arXiv:1908.10084</a><br><em>Shows how to fine-tune BERT into a usable sentence encoder producing embeddings that work well under cosine similarity. The foundation of most modern embedding models.</em></li>
+
+<li><span class="auth">Johnson, J., Douze, M., &amp; Jégou, H.</span> (2019). <span class="ttl">Billion-Scale Similarity Search with GPUs.</span> <span class="ven">IEEE Transactions on Big Data.</span> <a href="https://arxiv.org/abs/1702.08734" target="_blank" rel="noopener">arXiv:1702.08734</a><br><em>FAISS — Facebook's library for efficient similarity search, enabling approximate nearest-neighbor lookup over billions of vectors in milliseconds. The standard vector-search backend.</em></li>
+
+<li><span class="auth">Malkov, Yu. A., &amp; Yashunin, D. A.</span> (2016). <span class="ttl">Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs.</span> <span class="ven">IEEE Transactions on Pattern Analysis and Machine Intelligence.</span> <a href="https://arxiv.org/abs/1603.09320" target="_blank" rel="noopener">arXiv:1603.09320</a><br><em>HNSW, the graph-based index used by most modern vector databases (Pinecone, Weaviate, Qdrant, Milvus). Provides sub-linear search with high recall.</em></li>
+
+<li><span class="auth">Gao, L., Ma, X., Lin, J., &amp; Callan, J.</span> (2023). <span class="ttl">Precise Zero-Shot Dense Retrieval without Relevance Labels.</span> <span class="ven">Annual Meeting of the Association for Computational Linguistics (ACL).</span> <a href="https://arxiv.org/abs/2212.10496" target="_blank" rel="noopener">arXiv:2212.10496</a><br><em>HyDE (Hypothetical Document Embeddings): ask an LLM to write a fake answer to the query first, embed the fake answer, then use that embedding for retrieval. Often outperforms embedding the raw query directly.</em></li>
+
+<li><span class="auth">Izacard, G., Lewis, P., Lomeli, M., Hosseini, L., Petroni, F., Schick, T., Dwivedi-Yu, J., Joulin, A., Riedel, S., &amp; Grave, E.</span> (2023). <span class="ttl">Atlas: Few-shot Learning with Retrieval Augmented Language Models.</span> <span class="ven">Journal of Machine Learning Research (JMLR).</span> <a href="https://arxiv.org/abs/2208.03299" target="_blank" rel="noopener">arXiv:2208.03299</a><br><em>Shows RAG can match much larger closed-book models on knowledge-intensive tasks while being updatable and auditable.</em></li>
+
+<li><span class="auth">Gao, Y., Xiong, Y., Gao, X., Jia, K., Pan, J., Bi, Y., Dai, Y., Sun, J., &amp; Wang, H.</span> (2024). <span class="ttl">Retrieval-Augmented Generation for Large Language Models: A Survey.</span> <span class="ven">arXiv preprint.</span> <a href="https://arxiv.org/abs/2312.10997" target="_blank" rel="noopener">arXiv:2312.10997</a><br><em>Comprehensive survey of the RAG landscape: naive RAG, advanced RAG (re-ranking, query rewriting, fusion), and modular RAG (agentic pipelines with tool use).</em></li>
+</ol></div>`;
+
+  h += `<div class="info iac"><div class="il">Tip</div>Use the <strong>Next →</strong> button or the sidebar to walk through each step. The <strong>query selector</strong> and <strong>top-k slider</strong> in the header are live — change them on any step and watch the retrieval and generation update in real time.</div>`;
+
+  return h;
+}},
+
+// ───────────────────── 2. THE PROBLEM ─────────────────────
+{id: 'problem', title: 'The Problem', group: 'Setup',
+render() {
+  let h = `<div class="stage-title">The Problem: Closed-Book LLMs <span class="tag trd">PROBLEM</span></div>`;
+  h += `<p class="stage-desc">A standard LLM is a <strong>closed-book</strong> system: once training ends, all the knowledge it will ever have is compressed into its weights. This creates four hard problems that RAG directly addresses.</p>`;
+
+  h += `<div class="info ird"><div class="il">1 · Knowledge cutoff</div>
+The model only knows what was in its training data. A GPT-4 variant trained on data up to April 2024 cannot tell you about events in 2025 — not because it's being cagey, but because those events are not encoded in its weights. Any answer it gives will be extrapolation or confabulation.</div>`;
+
+  h += `<div class="info ird"><div class="il">2 · Hallucination</div>
+When asked about obscure facts, LLMs often produce confident-sounding but entirely fabricated answers. The model optimizes for "plausible next token" and has no internal signal for "I don't actually know this." RAG grounds the output in real sources so the model can either cite a fact or honestly say it wasn't found.</div>`;
+
+  h += `<div class="info ird"><div class="il">3 · No traceability</div>
+A closed-book answer is unauditable. You can't ask the model "where did you learn that?" and get a meaningful answer — the knowledge is diffused across billions of weights. For medical, legal, financial, and scientific applications, this is a dealbreaker.</div>`;
+
+  h += `<div class="info ird"><div class="il">4 · Can't update cheaply</div>
+Adding new knowledge means fine-tuning or re-training — expensive, slow, and error-prone. With RAG, updating the knowledge base is as simple as adding a new document to the vector database. The LLM itself never changes.</div>`;
+
+  // Example hallucination
+  h += `<h3 style="margin-top:1.2rem;font-size:0.95rem;color:var(--txt);">A concrete example</h3>`;
+  h += `<div class="answer-grid">
+<div class="answer-card bad">
+<div class="lbl">Closed-book LLM</div>
+<div class="txt"><em>Q: "What were Anthropic's Q4 2025 earnings?"</em><br><br>A: "In Q4 2025, Anthropic reported revenue of approximately $420 million, with year-over-year growth of 380%..."<br><br><strong style="color:var(--red);">⚠ Made up.</strong> Plausible-looking but entirely fabricated numbers.</div>
+</div>
+<div class="answer-card good">
+<div class="lbl">RAG</div>
+<div class="txt"><em>Q: "What were Anthropic's Q4 2025 earnings?"</em><br><br>A: "Based on the retrieved press release: Anthropic reported Q4 2025 revenue of $X million [source: press_release_2026_01]."<br><br><strong style="color:var(--acc);">✓ Grounded.</strong> Either answers with a real quote or says nothing was found.</div>
+</div>
+</div>`;
+
+  return h;
+}},
+
+// ───────────────────── 3. CHUNKING ─────────────────────
+{id: 'chunking', title: 'Chunking', group: 'Indexing',
+render() {
+  let h = `<div class="stage-title">Step 1 · Document Chunking <span class="tag tr">INDEX</span></div>`;
+  h += `<p class="stage-desc">Before retrieval can happen, the source corpus (PDFs, web pages, documentation, books, emails…) must be split into small <strong>chunks</strong>. Each chunk becomes one row in the vector database. The chunking strategy matters enormously — it determines what the retriever can actually find.</p>`;
+
+  h += `<div class="info ir"><div class="il">Why not just embed whole documents?</div>
+Two reasons. First, embedding models have a <strong>context limit</strong> (usually 512–8192 tokens) — you physically cannot feed them a whole PDF. Second, a single vector can only represent one "gist," so embedding a 50-page manual produces a fuzzy average that matches everything and nothing. Chunking gives you many focused vectors, each representing a specific topic.</div>`;
+
+  h += `<h3 style="margin-top:1rem;font-size:0.95rem;color:var(--txt);">Common chunking strategies</h3>`;
+  h += `<div class="glossary"><table>
+<tr><th>Strategy</th><th>How it works</th><th>When to use</th></tr>
+<tr><td class="sym">Fixed-size</td><td class="def">Split into N-token blocks (e.g., 512 tokens) regardless of structure.</td><td class="def">Simple baseline. Cheap but cuts sentences in half.</td></tr>
+<tr><td class="sym">Sliding window</td><td class="def">Fixed-size blocks with a 10–20% <strong>overlap</strong> between consecutive chunks.</td><td class="def">Default choice for most systems. Overlap ensures facts that straddle a boundary still appear in at least one chunk.</td></tr>
+<tr><td class="sym">Sentence-based</td><td class="def">Split on sentence boundaries, group sentences until a token budget is reached.</td><td class="def">Cleaner boundaries; works well for prose.</td></tr>
+<tr><td class="sym">Structure-aware</td><td class="def">Split on Markdown headings, code blocks, HTML tags, PDF sections.</td><td class="def">Best for technical documentation, where headings carry meaning.</td></tr>
+<tr><td class="sym">Semantic</td><td class="def">Use an embedding model to detect topic shifts and split there.</td><td class="def">Highest quality but computationally expensive.</td></tr>
+</table></div>`;
+
+  h += `<div class="info ig"><div class="il">The chunk-size trade-off</div>
+<strong>Small chunks (~100 tokens):</strong> precise retrieval, but each chunk lacks context — the LLM may not have enough surrounding information to answer.<br>
+<strong>Large chunks (~2000 tokens):</strong> lots of context per chunk, but retrieval is less precise (the relevant sentence is buried among irrelevant ones) and you can fit fewer chunks in the LLM's context window.<br>
+<strong>Sweet spot:</strong> most systems use <strong>200–500 token chunks with 10–20% overlap</strong>. Tune empirically for your corpus and queries.</div>`;
+
+  // ── Interactive chunking slider ──
+  h += `<h3 style="margin-top:1.5rem;font-size:0.95rem;color:var(--txt);">🎛️ Try it yourself · sliding-window chunker</h3>`;
+  h += `<p class="stage-desc">Below is a sample paragraph about LoRA. Drag the <strong>chunk size</strong> and <strong>overlap</strong> sliders to see how the same text gets split differently. Watch what happens when chunks are very small (too many fragments, no context) vs. very large (just one or two mega-chunks) vs. what happens with zero overlap (facts at the boundary can get cut in half).</p>`;
+  h += `<div class="inline-slider">
+<div class="ctrl"><label>chunk size</label><input type="range" min="30" max="200" step="5" value="${CHUNK_SIZE}" oninput="onChunkSizeChange(this.value)"><span class="val" id="chunk-size-val">${CHUNK_SIZE}</span><span style="font-size:0.66rem;color:var(--txt3);font-family:var(--mono);">chars</span></div>
+<div class="ctrl"><label>overlap</label><input type="range" min="0" max="50" step="2" value="${CHUNK_OVERLAP}" oninput="onChunkOverlapChange(this.value)"><span class="val" id="chunk-overlap-val">${CHUNK_OVERLAP}</span><span style="font-size:0.66rem;color:var(--txt3);font-family:var(--mono);">chars</span></div>
+</div>`;
+  h += renderChunkingDemo(CHUNK_SIZE, CHUNK_OVERLAP);
+  h += `<div class="info is"><div class="il">Things to try</div>
+<strong>• Chunk size = 30, overlap = 0</strong>: see how the text shatters into tiny fragments that each carry almost no meaning.<br>
+<strong>• Chunk size = 200, overlap = 0</strong>: one or two huge chunks — if the query asks about "low-rank decomposition" which appears mid-chunk, the whole chunk's embedding is dominated by other topics.<br>
+<strong>• Chunk size = 80, overlap = 20</strong>: reasonable balance. Notice how the overlap region repeats across consecutive chunks — this ensures facts straddling a boundary still appear intact in at least one chunk.</div>`;
+
+  // Show the corpus we'll use
+  h += `<h3 style="margin-top:1.2rem;font-size:0.95rem;color:var(--txt);">Our demo corpus</h3>`;
+  h += `<p class="stage-desc">For this simulator we use a tiny corpus of ${CORPUS.length} hand-crafted chunks covering four topics: LoRA fine-tuning, the Transformer paper, French geography, and vector similarity. In a real RAG system this corpus would be thousands to millions of chunks.</p>`;
+  h += `<div class="doc-list">`;
+  CORPUS.forEach(d => h += renderDoc(d));
+  h += `</div>`;
+
+  return h;
+}},
+
+// ───────────────────── 4. EMBEDDING ─────────────────────
+{id: 'embedding', title: 'Embedding', group: 'Indexing',
+render() {
+  let h = `<div class="stage-title">Step 2 · Embedding the Corpus <span class="tag tp">EMBED</span></div>`;
+  h += `<p class="stage-desc">Each chunk is passed through an <strong>embedding model</strong> that produces a fixed-length dense vector. Semantically similar chunks land near each other in this vector space. The embedding model is trained so that <em>"dog"</em> and <em>"puppy"</em> end up close together, while <em>"dog"</em> and <em>"spreadsheet"</em> end up far apart.</p>`;
+
+  h += `<div class="formula">vec(chunk) = <span class="hl">embed_model</span>( chunk_text )&nbsp;&nbsp;&nbsp;<span class="cm">// → ℝ^d, then L2-normalized</span></div>`;
+
+  h += `<div class="info ip"><div class="il">Popular embedding models</div>
+<table style="font-family:var(--mono);font-size:0.75rem;width:100%;">
+<tr><td><strong>all-MiniLM-L6-v2</strong></td><td>384 dims</td><td style="color:var(--txt3);">Sentence-Transformers default. Fast, small, decent quality.</td></tr>
+<tr><td><strong>bge-base-en-v1.5</strong></td><td>768 dims</td><td style="color:var(--txt3);">BAAI. Strong MTEB benchmark scores.</td></tr>
+<tr><td><strong>text-embedding-3-small</strong></td><td>1536 dims</td><td style="color:var(--txt3);">OpenAI. Paid API, high quality.</td></tr>
+<tr><td><strong>text-embedding-3-large</strong></td><td>3072 dims</td><td style="color:var(--txt3);">OpenAI. Highest quality in the OpenAI line.</td></tr>
+<tr><td><strong>voyage-3</strong></td><td>1024 dims</td><td style="color:var(--txt3);">Voyage AI. Leads several MTEB categories.</td></tr>
+</table></div>`;
+
+  // Show the first few chunks and their embeddings
+  h += `<h3 style="margin-top:1.2rem;font-size:0.95rem;color:var(--txt);">Corpus embeddings (after normalization)</h3>`;
+  h += `<p class="stage-desc">Each row is one chunk's embedding in our 8-dimensional toy space. Notice how related chunks have visually similar patterns — docs 1–3 (LoRA) look alike, docs 4–6 (Transformers) cluster separately, and so on.</p>`;
+
+  h += `<div class="mtx-wrap"><table class="mtx" style="margin:0 auto;">`;
+  h += `<tr><td class="cheader">id</td><td class="cheader">topic</td>`;
+  for (let i = 0; i < 8; i++) h += `<td class="cheader">d${i}</td>`;
+  h += `</tr>`;
+  const topics = ['LoRA', 'LoRA', 'LoRA', 'Transformers', 'Transformers', 'Transformers', 'Geography', 'Geography', 'Similarity', 'Similarity'];
+  CORPUS.forEach((d, i) => {
+    h += `<tr><td class="cheader">${d.id}</td><td class="cheader" style="text-align:left;padding-left:0.5rem;">${topics[i]}</td>`;
+    d.vec.forEach(v => h += `<td class="cp">${fmt(v)}</td>`);
+    h += `</tr>`;
+  });
+  h += `</table></div>`;
+
+  h += `<div class="info is"><div class="il">Why L2-normalize?</div>
+After embedding, we scale every vector to unit length (<code>||v|| = 1</code>). This serves two purposes: (1) it makes cosine similarity reduce to a simple dot product, which is much faster to compute; (2) it ensures retrieval ranks chunks by <em>direction</em>, not <em>length</em> — two chunks about the same topic should score the same regardless of how "loud" the embedding model made them.</div>`;
+
+  h += `<div class="info iac"><div class="il">Key property: isometry of meaning</div>
+A good embedding model makes <strong>semantic distance ≈ geometric distance</strong>. Paraphrases of the same idea become close vectors even if they share no words. This is what lets the retriever find <em>"Who authored the Transformer paper?"</em> when the corpus only contains <em>"Vaswani et al. introduced self-attention..."</em>.</div>`;
+
+  // ── Interactive 2D visualization ──
+  h += `<h3 style="margin-top:1.5rem;font-size:0.95rem;color:var(--txt);">📊 The vector space, visualized</h3>`;
+  h += `<p class="stage-desc">We can't draw 8 dimensions directly, but we can project them onto two axes for visualization. In real systems this is typically done with <strong>PCA</strong>, <strong>t-SNE</strong>, or <strong>UMAP</strong>; for this small toy corpus we use a simpler hand-picked projection that places each topic cluster at its own compass point (LoRA → right, Transformers → left, Geography → top, Similarity → bottom). The purple <strong>QUERY</strong> marker shows where the current query from the header dropdown lands — try switching queries to see it jump between clusters.</p>`;
+  h += `<div class="scatter-wrap">${renderScatter2D({showSimLines: false, showLabels: true})}</div>`;
+  h += `<div class="scatter-caption">↑ 2D projection of the 8-dim embeddings · change the query in the header to see the purple marker move</div>`;
+
+  h += `<div class="info is"><div class="il">What this tells us</div>
+Notice that the four topic clusters form <strong>clearly separated regions</strong>, even after squashing 8 dimensions down to 2. This is the property that makes retrieval work: <em>semantically related content lives near itself in vector space</em>. When a query arrives, finding the "most similar" documents is literally the same as finding the <em>geometrically closest</em> points.</div>`;
+
+  return h;
+}},
+
+// ───────────────────── 5. VECTOR DB ─────────────────────
+{id: 'vectordb', title: 'Vector Database', group: 'Indexing',
+render() {
+  let h = `<div class="stage-title">Step 3 · The Vector Database <span class="tag tr">INDEX</span></div>`;
+  h += `<p class="stage-desc">The embedded chunks are loaded into a <strong>vector database</strong> — a data store optimized for fast nearest-neighbor search over high-dimensional vectors. When a query arrives, the database finds the top-k closest vectors in milliseconds, even if there are millions of them.</p>`;
+
+  h += `<div class="info ir"><div class="il">What the database actually stores</div>
+For each chunk, the database stores:<br>
+• The <strong>embedding vector</strong> (used for similarity search)<br>
+• The <strong>original text</strong> (used later by the LLM)<br>
+• Optional <strong>metadata</strong>: document source, page number, timestamp, tags (used for filtering)<br><br>
+The embedding is the index, the text is the payload.</div>`;
+
+  h += `<h3 style="margin-top:1rem;font-size:0.95rem;color:var(--txt);">Brute-force vs. approximate search</h3>`;
+  h += `<div class="glossary"><table>
+<tr><th>Approach</th><th>Complexity</th><th>When to use</th></tr>
+<tr><td class="sym">Exact (brute-force)</td><td class="def">O(N·d) per query — compare against every vector.</td><td class="def">Corpus &lt; ~100k chunks. Guarantees the true top-k.</td></tr>
+<tr><td class="sym">IVF (inverted file)</td><td class="def">Cluster vectors, search only nearby clusters.</td><td class="def">Mid-size corpora. Trades some recall for speed.</td></tr>
+<tr><td class="sym" style="color:var(--rust);">HNSW</td><td class="def">Hierarchical Navigable Small World graph [5]. Logarithmic search via graph navigation.</td><td class="def">The modern default. Used by Pinecone, Weaviate, Qdrant, Milvus, pgvector.</td></tr>
+<tr><td class="sym">PQ (product quantization)</td><td class="def">Compress vectors to 8–16× smaller footprint.</td><td class="def">Billion-scale corpora where RAM is the bottleneck.</td></tr>
+</table></div>`;
+
+  h += `<div class="info is"><div class="il">Popular vector databases</div>
+<strong>FAISS</strong> (Meta, library) [4] · <strong>Pinecone</strong> (managed SaaS) · <strong>Weaviate</strong> (open-source, GraphQL) · <strong>Qdrant</strong> (open-source, Rust) · <strong>Milvus</strong> (open-source, Go) · <strong>Chroma</strong> (open-source, Python-first) · <strong>pgvector</strong> (PostgreSQL extension) · <strong>Elasticsearch / OpenSearch</strong> (with dense-vector fields). All of them speak roughly the same interface: insert vectors, query by vector, filter by metadata.</div>`;
+
+  // Show all embeddings as the "database"
+  h += `<h3 style="margin-top:1.2rem;font-size:0.95rem;color:var(--txt);">Our demo database</h3>`;
+  h += `<p class="stage-desc">All ${CORPUS.length} chunks have been indexed. When a query comes in, we'll compute cosine similarity against every chunk and sort by score. With only 10 vectors, brute-force is instant.</p>`;
+
+  h += `<div class="doc-list">`;
+  CORPUS.forEach(d => h += renderDoc(d));
+  h += `</div>`;
+
+  return h;
+}},
+
+// ───────────────────── 6. QUERY EMBED ─────────────────────
+{id: 'query-embed', title: 'Query Embedding', group: 'Retrieval',
+render() {
+  const {query} = computeRetrieval();
+  let h = `<div class="stage-title">Step 4 · Embed the Query <span class="tag tp">QUERY</span></div>`;
+  h += `<p class="stage-desc">When a user asks a question, the first thing we do is <strong>embed it using exactly the same model</strong> that embedded the corpus. This puts the query in the same vector space as the chunks, so cosine similarity becomes meaningful.</p>`;
+
+  h += `<div class="formula">q_vec = <span class="hl">embed_model</span>( query_text )&nbsp;&nbsp;&nbsp;<span class="cm">// same model as the corpus!</span></div>`;
+
+  h += `<div class="info ip"><div class="il">Current query</div>
+<strong>"${query.text}"</strong><br>
+<span style="font-size:0.78rem;color:var(--txt3);">Topic cluster: ${query.topic}</span></div>`;
+
+  h += `<div class="mtx-wrap"><div class="mtx-row">`;
+  h += renderVec(query.vec, `q_vec (8 dims, normalized)`, 'cp');
+  h += `</div></div>`;
+
+  h += `<div class="info ird"><div class="il">Common pitfall: model mismatch</div>
+If you embed the corpus with <code>bge-base</code> but the query with <code>all-MiniLM</code>, the vectors live in <strong>different spaces</strong> and cosine similarity becomes meaningless. Always use the same model on both sides. If you ever swap embedding models, you must <strong>re-embed the entire corpus</strong>.</div>`;
+
+  h += `<div class="info ig"><div class="il">Variant: HyDE (Hypothetical Document Embeddings)</div>
+Instead of embedding the raw query, HyDE [6] first asks an LLM to <em>write a plausible answer</em> to the query, then embeds the <em>answer</em> and searches with that embedding. The intuition: a fake answer is closer in vector space to real answers than the question itself is. This often improves retrieval quality, especially for underspecified queries.</div>`;
+
+  return h;
+}},
+
+// ───────────────────── 7. SIMILARITY ─────────────────────
+{id: 'similarity', title: 'Similarity Search', group: 'Retrieval',
+render() {
+  const {query, scored} = computeRetrieval();
+  let h = `<div class="stage-title">Step 5 · Cosine Similarity Search <span class="tag ts">SEARCH</span></div>`;
+  h += `<p class="stage-desc">Compute the cosine similarity between the query embedding and <strong>every chunk embedding</strong> in the database. Since all vectors are L2-normalized, cosine similarity reduces to a simple dot product — fast and parallelizable.</p>`;
+
+  h += `<div class="formula">sim(q, d) = <span class="purple">q_vec</span> · <span class="rust">d_vec</span> = Σᵢ <span class="purple">q_vec[i]</span> · <span class="rust">d_vec[i]</span>&nbsp;&nbsp;&nbsp;<span class="cm">// dot product (both unit length)</span></div>`;
+
+  // Show a sample computation for the top-1 result
+  const top = scored[0];
+  h += `<h3 style="margin-top:1.2rem;font-size:0.95rem;color:var(--txt);">Worked example · comparing the query to ${top.id}</h3>`;
+  h += `<div class="mtx-wrap"><div class="mtx-row">`;
+  h += renderVec(query.vec, 'q_vec', 'cp');
+  h += `<span class="op">·</span>`;
+  h += renderVec(top.vec, `${top.id} vec`, 'cr');
+  h += `<span class="op">=</span>`;
+  h += `<div class="mtx-block"><div class="mtx-label">sim</div><table class="mtx"><tr><td class="ca" style="font-size:0.85rem;font-weight:700;">${fmt(top.score)}</td></tr></table></div>`;
+  h += `</div></div>`;
+
+  // Show all scores as bars
+  h += `<h3 style="margin-top:1.2rem;font-size:0.95rem;color:var(--txt);">Scores for all ${CORPUS.length} chunks (sorted)</h3>`;
+  h += `<p class="stage-desc">Each bar shows the cosine similarity between the query and one chunk. Higher = more relevant. The top few should come from the correct topic cluster.</p>`;
+  const maxScore = Math.max(...scored.map(s => s.score));
+  h += `<div class="bar-wrap">`;
+  scored.forEach((s, i) => {
+    const isTop = i < TOP_K;
+    const width = Math.max(2, (s.score / Math.max(maxScore, 0.01)) * 100);
+    h += `<div class="bar-row">
+<span class="bar-label">${s.id}</span>
+<div class="bar-track"><div class="bar-fill" style="width:${width}%;background:${isTop ? 'var(--acc)' : 'var(--stone)'};opacity:${isTop ? 1 : 0.4};"></div></div>
+<span class="bar-val" style="color:${isTop ? 'var(--acc)' : 'var(--txt3)'};">${fmt(s.score)}</span>
+</div>`;
+  });
+  h += `</div>`;
+
+  h += `<div class="info iac"><div class="il">Observation</div>
+The top-${TOP_K} results (highlighted in forest green) should be from the ${query.topic} cluster. The other chunks — from unrelated topics — have clearly lower scores. This is the retrieval signal: even without keyword matching, semantic embeddings pull the right documents to the top.</div>`;
+
+  // ── Interactive 2D plot with similarity lines ──
+  h += `<h3 style="margin-top:1.5rem;font-size:0.95rem;color:var(--txt);">📊 Geometric view of similarity search</h3>`;
+  h += `<p class="stage-desc">In 2D, cosine similarity is easy to see: <strong>closer points have higher scores</strong>. Each line in the plot below connects the query (purple star) to one document. <strong>Solid forest-green lines</strong> mark the top-${TOP_K} retrieved documents; <strong>dashed gray lines</strong> are everything else. The line thickness is proportional to the similarity score. Change the <strong>query</strong> and <strong>top-k</strong> controls in the header to see the lines re-route live.</p>`;
+  h += `<div class="scatter-wrap">${renderScatter2D({showSimLines: true, showLabels: true, showRanks: true})}</div>`;
+  h += `<div class="scatter-caption">↑ Query-to-document similarity lines · the top-${TOP_K} are highlighted with numbered ranks · change query and top-k in the header</div>`;
+
+  h += `<div class="info ip"><div class="il">Note on dimensionality</div>
+In this toy visualization, we project the 8-dim embeddings down to 2 using a hand-picked semantic projection. In a real system, embeddings might have 768 or 1536 or 3072 dimensions, and you'd use <strong>PCA</strong>, <strong>t-SNE</strong>, or <strong>UMAP</strong> for the reduction. The important property is preserved either way: clusters that are close in high-dim space stay close in 2D.</div>`;
+
+  return h;
+}},
+
+// ───────────────────── 8. TOP-K ─────────────────────
+{id: 'topk', title: 'Top-k Selection', group: 'Retrieval',
+render() {
+  const {retrieved} = computeRetrieval();
+  let h = `<div class="stage-title">Step 6 · Top-k Selection <span class="tag tr">RETRIEVE</span></div>`;
+  h += `<p class="stage-desc">Keep only the <strong>k chunks with the highest similarity scores</strong>. These will be fed to the LLM as context. Everything else is discarded (for this query — the database stays intact).</p>`;
+
+  h += `<div class="formula">retrieved = argtop-k<sub>d ∈ corpus</sub> sim(q, d)&nbsp;&nbsp;&nbsp;<span class="cm">// currently k = ${TOP_K}</span></div>`;
+
+  h += `<h3 style="margin-top:1rem;font-size:0.95rem;color:var(--txt);">Retrieved passages (k = ${TOP_K})</h3>`;
+  h += `<p class="stage-desc">These are the passages that will be passed to the LLM. Change the top-k slider in the header to see more or fewer.</p>`;
+  h += `<div class="doc-list">`;
+  retrieved.forEach((d, i) => {
+    h += renderDoc(d, {retrieved: true, top: i === 0, score: d.score, rank: i});
+  });
+  h += `</div>`;
+
+  h += `<div class="info ig"><div class="il">How to pick k</div>
+<strong>Small k (1–3):</strong> minimizes prompt cost and reduces the chance of distracting the LLM with irrelevant chunks. Works when retrieval is very precise.<br>
+<strong>Medium k (5–10):</strong> standard default. Balances recall (catching the right chunk) with signal-to-noise.<br>
+<strong>Large k (20+):</strong> for tasks needing broad coverage (summarization, multi-hop QA). Usually combined with a <em>re-ranker</em> that further filters the top-k down.</div>`;
+
+  h += `<div class="info is"><div class="il">Advanced: re-ranking</div>
+For higher-quality systems, the retrieval is a two-stage process:<br>
+<strong>Stage 1:</strong> retrieve top-50 or top-100 with a cheap bi-encoder (what we just did).<br>
+<strong>Stage 2:</strong> re-score those with a slow but accurate <strong>cross-encoder</strong> that reads the query and each chunk together and outputs a relevance score. Keep the top-5 after re-ranking.<br><br>
+Cross-encoders (e.g., <code>ms-marco-MiniLM-L-12-v2</code>) are much more accurate than bi-encoders but can't be pre-computed — they must run per query per candidate, which is why they're only used on the shortlist.</div>`;
+
+  return h;
+}},
+
+// ───────────────────── 8b. RE-RANKING ─────────────────────
+{id: 'rerank', title: 'Re-ranking', group: 'Retrieval',
+render() {
+  const {query, scored} = computeRetrieval();
+  let h = `<div class="stage-title">Deep Dive · Bi-encoder vs Cross-encoder Re-ranking <span class="tag tr">DEEP DIVE</span></div>`;
+  h += `<p class="stage-desc">The retrieval you just saw uses a <strong>bi-encoder</strong> — cheap, pre-computable, but coarse. High-quality RAG systems add a second stage: a <strong>cross-encoder re-ranker</strong> that scores the shortlist more carefully. Understanding the difference between these two architectures is the single most important concept in modern dense retrieval.</p>`;
+
+  // Side-by-side architecture comparison
+  h += `<div class="encoder-cmp">
+<div class="encoder-card bi">
+<h4>Bi-encoder (a.k.a. dual encoder)</h4>
+<div class="tagline">"Encode once, compare cheaply"</div>
+<svg viewBox="0 0 300 170" xmlns="http://www.w3.org/2000/svg" font-family="DM Sans, sans-serif">
+  <defs>
+    <marker id="arrBi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b8778"/>
+    </marker>
+  </defs>
+  <!-- Query path -->
+  <rect x="10" y="10" width="80" height="22" rx="4" fill="#7e22ce28" stroke="#7e22ce" stroke-width="1.5"/>
+  <text x="50" y="25" text-anchor="middle" font-size="10" fill="#7e22ce" font-weight="600">query</text>
+  <line x1="50" y1="32" x2="50" y2="45" stroke="#8b8778" stroke-width="1.5" marker-end="url(#arrBi)"/>
+  <rect x="10" y="48" width="80" height="30" rx="4" fill="#16653428" stroke="#166534" stroke-width="1.5"/>
+  <text x="50" y="67" text-anchor="middle" font-size="10" fill="#166534" font-weight="700">Encoder</text>
+  <line x1="50" y1="78" x2="50" y2="95" stroke="#8b8778" stroke-width="1.5" marker-end="url(#arrBi)"/>
+  <rect x="10" y="98" width="80" height="22" rx="4" fill="#7e22ce28" stroke="#7e22ce" stroke-width="1.5" stroke-dasharray="3 2"/>
+  <text x="50" y="113" text-anchor="middle" font-size="9" fill="#7e22ce" font-family="DM Mono, monospace">q_vec</text>
+  <!-- Document path -->
+  <rect x="210" y="10" width="80" height="22" rx="4" fill="#c2410c28" stroke="#c2410c" stroke-width="1.5"/>
+  <text x="250" y="25" text-anchor="middle" font-size="10" fill="#c2410c" font-weight="600">doc</text>
+  <line x1="250" y1="32" x2="250" y2="45" stroke="#8b8778" stroke-width="1.5" marker-end="url(#arrBi)"/>
+  <rect x="210" y="48" width="80" height="30" rx="4" fill="#16653428" stroke="#166534" stroke-width="1.5"/>
+  <text x="250" y="67" text-anchor="middle" font-size="10" fill="#166534" font-weight="700">Encoder</text>
+  <line x1="250" y1="78" x2="250" y2="95" stroke="#8b8778" stroke-width="1.5" marker-end="url(#arrBi)"/>
+  <rect x="210" y="98" width="80" height="22" rx="4" fill="#c2410c28" stroke="#c2410c" stroke-width="1.5" stroke-dasharray="3 2"/>
+  <text x="250" y="113" text-anchor="middle" font-size="9" fill="#c2410c" font-family="DM Mono, monospace">d_vec</text>
+  <!-- Combine -->
+  <line x1="90" y1="109" x2="135" y2="143" stroke="#8b8778" stroke-width="1.5" marker-end="url(#arrBi)"/>
+  <line x1="210" y1="109" x2="165" y2="143" stroke="#8b8778" stroke-width="1.5" marker-end="url(#arrBi)"/>
+  <rect x="110" y="145" width="80" height="22" rx="4" fill="#0369a128" stroke="#0369a1" stroke-width="1.5"/>
+  <text x="150" y="160" text-anchor="middle" font-size="9" fill="#0369a1" font-weight="600">cos(q, d)</text>
+</svg>
+<div class="props">
+<strong>Two independent forward passes</strong> — one for the query, one for the document. The two vectors never interact inside the model; they only meet at the end for a fast dot product.<br><br>
+<strong>✓ Documents can be pre-computed</strong> and stored offline. At query time: one encoder call + fast vector search.<br>
+<strong>✓ Scales to billions</strong> of documents with HNSW indexing.<br>
+<strong>✗ The encoder must be generic</strong> — it has to compress everything it <em>might</em> care about into a fixed-length vector, without knowing the query.<br><br>
+<strong>Examples:</strong> Sentence-BERT, all-MiniLM, BGE, OpenAI embeddings, DPR.
+</div>
+</div>
+
+<div class="encoder-card cross">
+<h4>Cross-encoder (a.k.a. joint encoder)</h4>
+<div class="tagline">"Read query and doc together"</div>
+<svg viewBox="0 0 300 170" xmlns="http://www.w3.org/2000/svg" font-family="DM Sans, sans-serif">
+  <defs>
+    <marker id="arrCr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b8778"/>
+    </marker>
+  </defs>
+  <!-- Single combined input -->
+  <rect x="30" y="10" width="110" height="22" rx="4" fill="#7e22ce28" stroke="#7e22ce" stroke-width="1.5"/>
+  <text x="85" y="25" text-anchor="middle" font-size="10" fill="#7e22ce" font-weight="600">[CLS] query</text>
+  <rect x="160" y="10" width="110" height="22" rx="4" fill="#c2410c28" stroke="#c2410c" stroke-width="1.5"/>
+  <text x="215" y="25" text-anchor="middle" font-size="10" fill="#c2410c" font-weight="600">[SEP] doc [SEP]</text>
+  <!-- Merge arrow -->
+  <line x1="85" y1="32" x2="150" y2="48" stroke="#8b8778" stroke-width="1.5"/>
+  <line x1="215" y1="32" x2="150" y2="48" stroke="#8b8778" stroke-width="1.5"/>
+  <line x1="150" y1="48" x2="150" y2="55" stroke="#8b8778" stroke-width="1.5" marker-end="url(#arrCr)"/>
+  <!-- Single big encoder -->
+  <rect x="30" y="58" width="240" height="60" rx="6" fill="#c2410c28" stroke="#c2410c" stroke-width="2"/>
+  <text x="150" y="80" text-anchor="middle" font-size="11" fill="#c2410c" font-weight="700">Single Transformer</text>
+  <text x="150" y="96" text-anchor="middle" font-size="9" fill="#57534e" font-style="italic">self-attention over query + doc jointly</text>
+  <text x="150" y="110" text-anchor="middle" font-size="9" fill="#57534e">(every query token sees every doc token)</text>
+  <line x1="150" y1="118" x2="150" y2="140" stroke="#8b8778" stroke-width="1.5" marker-end="url(#arrCr)"/>
+  <!-- Score directly -->
+  <rect x="100" y="142" width="100" height="22" rx="4" fill="#0369a128" stroke="#0369a1" stroke-width="1.5"/>
+  <text x="150" y="157" text-anchor="middle" font-size="10" fill="#0369a1" font-weight="700">relevance score</text>
+</svg>
+<div class="props">
+<strong>One forward pass per (query, doc) pair.</strong> The query and document are concatenated as a single input; self-attention lets them interact at every layer.<br><br>
+<strong>✓ Much more accurate</strong> — the model can form query-specific representations and catch subtle relational signals.<br>
+<strong>✗ Nothing can be pre-computed.</strong> Every query means re-running the model on every candidate.<br>
+<strong>✗ Scales only to hundreds</strong> of candidates per query — impractical as a first-stage retriever.<br><br>
+<strong>Examples:</strong> ms-marco-MiniLM-L-12-v2, bge-reranker-large, Cohere rerank, Voyage rerank-2.
+</div>
+</div>
+</div>`;
+
+  // The two-stage pipeline explanation
+  h += `<h3 style="margin-top:1.2rem;font-size:0.95rem;color:var(--txt);">The two-stage pipeline · fast filter + precise judge</h3>`;
+  h += `<p class="stage-desc">Neither architecture alone is ideal. Production RAG systems combine them: the bi-encoder scans the entire corpus to produce a shortlist of ~50–100 candidates, then the cross-encoder re-scores those candidates precisely. You get bi-encoder speed <em>and</em> cross-encoder quality.</p>`;
+  h += `<div class="formula">corpus (10M docs)&nbsp;→&nbsp;<span class="hl">bi-encoder top-100</span>&nbsp;→&nbsp;<span class="rust">cross-encoder top-5</span>&nbsp;→&nbsp;LLM context</div>`;
+
+  // Latency comparison chart (scaling with corpus size)
+  h += `<h3 style="margin-top:1.2rem;font-size:0.95rem;color:var(--txt);">📊 Latency at scale · why two stages are necessary</h3>`;
+  h += `<p class="stage-desc">The bar chart below shows approximate query latency (in ms) for each approach, assuming a realistic mix of CPU vector index + GPU cross-encoder. Note the different time scales.</p>`;
+  const scenarios = [
+    {name: 'Corpus: 1k docs',   bi: 2,    crossFull: 100,   twoStage: 12},
+    {name: 'Corpus: 100k docs', bi: 5,    crossFull: 10000, twoStage: 15},
+    {name: 'Corpus: 10M docs',  bi: 12,   crossFull: 1000000, twoStage: 22},
+  ];
+  h += `<div class="latency-chart">`;
+  scenarios.forEach(s => {
+    h += `<div style="font-family:var(--mono);font-size:0.75rem;color:var(--txt);font-weight:600;margin:0.7rem 0 0.3rem;">${s.name}</div>`;
+    // Scale bars relative to max of this scenario
+    const maxLat = Math.max(s.bi, s.crossFull, s.twoStage);
+    const fmtLat = ms => ms < 1000 ? `${ms} ms` : ms < 60000 ? `${(ms/1000).toFixed(1)} s` : `${(ms/60000).toFixed(1)} min`;
+    h += `<div class="lat-row"><span class="lat-label">bi-encoder</span><div class="lat-bar"><div class="lat-fill" style="width:${(s.bi/maxLat)*100}%;background:var(--acc);"></div></div><span class="lat-val">${fmtLat(s.bi)}</span></div>`;
+    h += `<div class="lat-row"><span class="lat-label">cross-encoder (naive)</span><div class="lat-bar"><div class="lat-fill" style="width:100%;background:var(--red);"></div></div><span class="lat-val">${fmtLat(s.crossFull)}</span></div>`;
+    h += `<div class="lat-row"><span class="lat-label">two-stage</span><div class="lat-bar"><div class="lat-fill" style="width:${(s.twoStage/maxLat)*100}%;background:var(--rust);"></div></div><span class="lat-val">${fmtLat(s.twoStage)}</span></div>`;
+  });
+  h += `</div>`;
+
+  h += `<div class="info ir"><div class="il">Notice the scaling</div>
+At 10M documents, a naive cross-encoder would take <strong>~16 minutes per query</strong> — obviously unusable. The two-stage pipeline stays around <strong>~22 ms</strong> regardless of corpus size, because the cross-encoder only runs on a fixed shortlist of 100 candidates. This decoupling is the entire reason production systems use both architectures.</div>`;
+
+  // Re-ranking before/after demo
+  h += `<h3 style="margin-top:1.2rem;font-size:0.95rem;color:var(--txt);">Re-ranking in action · before vs after</h3>`;
+  h += `<p class="stage-desc">Below is a simulated re-ranking of the top-5 results for the current query. The cross-encoder scores are hand-crafted to show how re-ranking can shuffle the order — a document that was rank 4 in bi-encoder scores can jump to rank 1 because the cross-encoder reads it more carefully.</p>`;
+
+  // Take top-5 bi-encoder
+  const top5 = scored.slice(0, 5);
+  // Simulate cross-encoder re-ranking: permute with a deterministic "better" order
+  // We boost docs whose text length matches query topic more precisely
+  const crossScores = top5.map((d, i) => ({
+    ...d,
+    // Simulated cross-encoder: amplifies differences, injects some reshuffling
+    crossScore: +(0.5 + 0.4 * Math.sin(d.score * 7 + i * 2.3) + d.score * 0.1).toFixed(3)
+  }));
+  const afterRerank = [...crossScores].sort((a, b) => b.crossScore - a.crossScore);
+
+  h += `<div class="rerank-grid">
+<div class="rerank-col before">
+<h4>Before · bi-encoder top-5</h4>`;
+  top5.forEach((d, i) => {
+    h += `<div class="rerank-item"><span class="rank">${i + 1}</span><span class="id">${d.id}</span><span class="score">${fmt(d.score)}</span></div>`;
+  });
+  h += `</div>
+<div class="rerank-arrow">→</div>
+<div class="rerank-col after">
+<h4>After · cross-encoder re-scored</h4>`;
+  afterRerank.forEach((d, newRank) => {
+    const oldRank = top5.findIndex(t => t.id === d.id);
+    const moved = newRank < oldRank ? 'moved-up' : newRank > oldRank ? 'moved-down' : '';
+    const arrow = newRank < oldRank ? '↑' : newRank > oldRank ? '↓' : '·';
+    h += `<div class="rerank-item ${moved}"><span class="rank">${newRank + 1}</span><span class="id">${d.id}</span><span style="color:var(--txt3);font-family:var(--mono);font-size:0.66rem;">${arrow} was ${oldRank + 1}</span><span class="score">${fmt(d.crossScore)}</span></div>`;
+  });
+  h += `</div>
+</div>`;
+
+  h += `<div class="info iac"><div class="il">Why re-ranking matters in practice</div>
+The bi-encoder has to decide "is this doc relevant?" without ever looking at the doc and query together. The cross-encoder can notice things like "the query asks about <em>causes</em> but this passage only lists <em>effects</em>" — a relational distinction that a single dot product cannot capture. Empirically, re-ranking typically improves NDCG@10 by <strong>5–15 percentage points</strong> over bi-encoder-only retrieval (Nogueira &amp; Cho 2019; Thakur et al. 2021).</div>`;
+
+  h += `<div class="info ig"><div class="il">Library analogy</div>
+<strong>Bi-encoder</strong> is like reading only the book titles on a shelf. You can scan thousands of books per minute, and you'll narrow a library down to 20 plausible candidates. But you'll sometimes miss a great book whose title doesn't match what you expected.<br><br>
+<strong>Cross-encoder</strong> is like actually opening each book and skimming it with your specific question in mind. Much slower — a minute per book — but now you can tell which ones <em>really</em> answer the question.<br><br>
+You wouldn't skim every book in the library, but skimming the 20 candidates the title-scan gave you? Perfectly manageable. That's retrieve-then-rerank in one sentence.</div>`;
+
+  return h;
+}},
+
+// ───────────────────── 9. AUGMENT PROMPT ─────────────────────
+{id: 'augment', title: 'Prompt Augmentation', group: 'Generation',
+render() {
+  const {query, retrieved} = computeRetrieval();
+  let h = `<div class="stage-title">Step 7 · Augment the Prompt <span class="tag tst">AUGMENT</span></div>`;
+  h += `<p class="stage-desc">Now we assemble the final prompt. The retrieved chunks are concatenated into a <strong>context block</strong>, wrapped with system instructions that tell the LLM to answer <em>only based on the provided context</em>, and the user's query is appended at the end.</p>`;
+
+  h += `<div class="info ist"><div class="il">The prompt template</div>
+Typically looks like:
+<div class="formula" style="margin:0.6rem 0;">[SYSTEM]&nbsp;<span class="cm">rules for the model</span><br>[CONTEXT]&nbsp;<span class="cm">retrieved chunks, numbered</span><br>[QUERY]&nbsp;<span class="cm">user question</span><br>[ANSWER]&nbsp;<span class="cm">← LLM completes from here</span></div>
+The exact wording varies but the structure is universal.</div>`;
+
+  // Build the actual prompt
+  h += `<h3 style="margin-top:1.2rem;font-size:0.95rem;color:var(--txt);">The augmented prompt (what actually gets sent to the LLM)</h3>`;
+  let promptText = `<span class="label">System instructions</span><span class="sys">You are a helpful assistant. Answer the user's question using ONLY the provided context. If the answer is not in the context, say "I don't know." Cite sources by their doc_id.</span>
+
+<span class="label">Retrieved context (top-${TOP_K})</span>`;
+  retrieved.forEach((d, i) => {
+    promptText += `\n<span class="ctx">[${d.id}] ${d.text}</span>`;
+  });
+  promptText += `\n\n<span class="label">User query</span><span class="q">${query.text}</span>
+
+<span class="label">Answer</span><span class="a">___</span>`;
+  h += `<div class="prompt-box">${promptText}</div>`;
+
+  h += `<div class="info iac"><div class="il">Why the explicit instructions?</div>
+Without the "use ONLY the provided context" clause, the LLM will happily blend its own memorized knowledge with the retrieved passages — defeating the grounding guarantee. Well-engineered RAG prompts are extremely firm about this: "if the answer is not in the context, say so." The stricter the instructions, the more auditable the system.</div>`;
+
+  h += `<div class="info ig"><div class="il">Context window budget</div>
+Every chunk in the context takes up tokens in the LLM's context window. For a 16k-token window:<br>
+• System prompt: ~200 tokens<br>
+• User query: ~50 tokens<br>
+• Room for context: ~15 000 tokens<br>
+• At 500 tokens/chunk, that's a hard ceiling of ~30 chunks per query.<br><br>
+In practice you want <em>far fewer</em> — 3 to 10 well-chosen chunks beat 30 mediocre ones, because the LLM's attention dilutes as context grows ("lost in the middle" effect).</div>`;
+
+  return h;
+}},
+
+// ───────────────────── 10. GENERATION ─────────────────────
+{id: 'generation', title: 'Generation', group: 'Generation',
+render() {
+  const {query, retrieved} = computeRetrieval();
+  let h = `<div class="stage-title">Step 8 · LLM Generation <span class="tag tac">GENERATE</span></div>`;
+  h += `<p class="stage-desc">Finally, the augmented prompt is sent to a language model, which generates an answer conditioned on the retrieved context. Because the model sees specific factual passages, it can <strong>quote them, paraphrase them, and cite them</strong> — rather than pulling answers from its training memory.</p>`;
+
+  h += `<div class="formula">answer = LLM( <span class="hl">augmented_prompt</span> )&nbsp;&nbsp;&nbsp;<span class="cm">// standard autoregressive generation</span></div>`;
+
+  h += `<h3 style="margin-top:1rem;font-size:0.95rem;color:var(--txt);">With retrieval vs without retrieval</h3>`;
+  h += `<p class="stage-desc">The same query, asked of the same LLM, with and without the retrieved context. Notice how RAG produces specific, grounded, citable answers, while the closed-book version either hedges or confabulates.</p>`;
+
+  h += `<div class="answer-grid">
+<div class="answer-card bad">
+<div class="lbl">Without RAG · closed-book</div>
+<div class="txt">${query.withoutRag}</div>
+</div>
+<div class="answer-card good">
+<div class="lbl">With RAG · grounded</div>
+<div class="txt">${query.withRag}</div>
+</div>
+</div>`;
+
+  h += `<div class="info iac"><div class="il">What makes a good RAG answer</div>
+<strong>1. Faithful</strong> — every claim traces back to a retrieved passage, nothing invented.<br>
+<strong>2. Cited</strong> — each factual statement points to the chunk it came from.<br>
+<strong>3. Complete</strong> — uses all the relevant retrieved information, not just the first chunk.<br>
+<strong>4. Honest about gaps</strong> — if the context doesn't contain the answer, the model says so instead of filling in from memory.</div>`;
+
+  h += `<div class="info ig"><div class="il">The LLM is frozen too</div>
+Notice that in standard RAG, the LLM itself is never trained or fine-tuned. It's used as-is. All the "knowledge" lives in the vector database, and updating knowledge means updating the database — no retraining, no fine-tuning, no re-deployment of the model. This is RAG's biggest operational advantage: the model and the knowledge are decoupled.</div>`;
+
+  // ── Temperature section ──
+  h += `<h3 style="margin-top:1.5rem;font-size:0.95rem;color:var(--txt);">Where does temperature fit in?</h3>`;
+  h += `<p class="stage-desc">At the very end of this step, when the LLM actually generates tokens, the standard sampling hyperparameters apply — <code>temperature</code>, <code>top-k</code>, <code>top-p</code>. They operate on the <strong>final softmax over the vocabulary</strong>, exactly as in any non-RAG LLM. The retrieval pipeline has no influence on them and they have no influence on the retrieval pipeline.</p>`;
+
+  h += `<div class="info ip"><div class="il">Temperature recap (from the GPT decoder simulator)</div>
+Temperature <code>T</code> divides the final logits before softmax:
+<div class="formula" style="margin:0.6rem 0;">P(next token) = softmax( logits / <span class="hl">T</span> )</div>
+<strong>T &lt; 1</strong> → sharper distribution, more deterministic output. Good for factual RAG answers where you want the model to commit to what the context says.<br>
+<strong>T = 1</strong> → the model's natural distribution.<br>
+<strong>T &gt; 1</strong> → flatter distribution, more creative/varied output. Rarely what you want in RAG — it can cause the model to wander away from the retrieved facts.</div>`;
+
+  h += `<div class="info iac"><div class="il">Recommended temperature for RAG</div>
+Most production RAG systems set <strong>temperature = 0 to 0.3</strong>, deliberately pushing the model toward deterministic, committed answers:<br><br>
+<strong>Why low?</strong> You retrieved specific passages for a reason. You want the model to <em>use</em> those facts, not to improvise around them. High temperature makes the model more likely to paraphrase loosely, fill in gaps from memory, or pick a less-supported token — all of which weaken the grounding guarantee that RAG is supposed to provide.<br><br>
+<strong>Exception:</strong> if the task is generative rather than factual (e.g., "write a marketing blurb using these product specs"), a moderate temperature (0.5–0.7) can help produce varied phrasings while the retrieved context still anchors the content.</div>`;
+
+  // Pipeline diagram showing where temperature lives
+  h += `<div class="arch-wrap">
+<svg viewBox="0 0 660 180" xmlns="http://www.w3.org/2000/svg" font-family="DM Sans, sans-serif">
+  <defs>
+    <marker id="arrT2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b8778"/>
+    </marker>
+  </defs>
+
+  <!-- Augmented prompt -->
+  <rect x="20" y="60" width="140" height="50" rx="8" fill="#57534e22" stroke="#57534e" stroke-width="2"/>
+  <text x="90" y="82" text-anchor="middle" font-size="11" fill="#57534e" font-weight="700">Augmented prompt</text>
+  <text x="90" y="98" text-anchor="middle" font-size="9" fill="#57534e" font-family="DM Mono, monospace">sys + ctx + query</text>
+
+  <line x1="160" y1="85" x2="200" y2="85" stroke="#8b8778" stroke-width="2" marker-end="url(#arrT2)"/>
+
+  <!-- LLM forward -->
+  <rect x="200" y="60" width="130" height="50" rx="8" fill="#16653428" stroke="#166534" stroke-width="2"/>
+  <text x="265" y="82" text-anchor="middle" font-size="11" fill="#166534" font-weight="700">LLM forward pass</text>
+  <text x="265" y="98" text-anchor="middle" font-size="9" fill="#57534e" font-family="DM Mono, monospace">attention, FFN, ...</text>
+
+  <line x1="330" y1="85" x2="370" y2="85" stroke="#8b8778" stroke-width="2" marker-end="url(#arrT2)"/>
+
+  <!-- Logits -->
+  <rect x="370" y="60" width="100" height="50" rx="8" fill="#0369a128" stroke="#0369a1" stroke-width="2"/>
+  <text x="420" y="82" text-anchor="middle" font-size="11" fill="#0369a1" font-weight="700">Logits</text>
+  <text x="420" y="98" text-anchor="middle" font-size="9" fill="#57534e" font-family="DM Mono, monospace">[V]</text>
+
+  <line x1="470" y1="85" x2="510" y2="85" stroke="#8b8778" stroke-width="2" marker-end="url(#arrT2)"/>
+  <text x="490" y="78" text-anchor="middle" font-size="9" fill="#7e22ce" font-family="DM Mono, monospace">÷ T</text>
+
+  <!-- Softmax + sample -->
+  <rect x="510" y="60" width="130" height="50" rx="8" fill="#7e22ce28" stroke="#7e22ce" stroke-width="2"/>
+  <text x="575" y="82" text-anchor="middle" font-size="11" fill="#7e22ce" font-weight="700">Softmax → sample</text>
+  <text x="575" y="98" text-anchor="middle" font-size="9" fill="#57534e" font-family="DM Mono, monospace">top-k, top-p</text>
+
+  <!-- RAG scope bracket (left) -->
+  <line x1="20" y1="140" x2="330" y2="140" stroke="#c2410c" stroke-width="2"/>
+  <line x1="20" y1="140" x2="20" y2="130" stroke="#c2410c" stroke-width="2"/>
+  <line x1="330" y1="140" x2="330" y2="130" stroke="#c2410c" stroke-width="2"/>
+  <text x="175" y="158" text-anchor="middle" font-size="10" fill="#c2410c" font-weight="600">RAG pipeline (retrieval + prompt)</text>
+
+  <!-- Sampling scope bracket (right) -->
+  <line x1="370" y1="140" x2="640" y2="140" stroke="#7e22ce" stroke-width="2"/>
+  <line x1="370" y1="140" x2="370" y2="130" stroke="#7e22ce" stroke-width="2"/>
+  <line x1="640" y1="140" x2="640" y2="130" stroke="#7e22ce" stroke-width="2"/>
+  <text x="505" y="158" text-anchor="middle" font-size="10" fill="#7e22ce" font-weight="600">Sampling (temperature, top-k, top-p)</text>
+
+  <!-- Title -->
+  <text x="330" y="25" text-anchor="middle" font-size="12" fill="#1c1a15" font-weight="700">Two independent stages</text>
+  <text x="330" y="42" text-anchor="middle" font-size="10" fill="#57534e" font-style="italic">RAG controls what goes in; sampling controls how tokens come out</text>
+</svg>
+</div>`;
+
+  // Cheat sheet — which knob lives where
+  h += `<h3 style="margin-top:1.2rem;font-size:0.95rem;color:var(--txt);">Parameter cheat sheet · which knob lives where</h3>`;
+  h += `<div class="glossary"><table>
+<tr><th>Parameter</th><th>Stage</th><th>What it controls</th></tr>
+<tr><td class="sym" style="color:var(--rust);">chunk size, overlap</td><td class="val">Indexing</td><td><strong>How the corpus is split.</strong> Decided once when building the vector database. Affects what the retriever can see.</td></tr>
+<tr><td class="sym" style="color:var(--rust);">embedding model</td><td class="val">Indexing</td><td><strong>The vector representation</strong> of chunks and queries. Must be consistent on both sides.</td></tr>
+<tr><td class="sym" style="color:var(--acc);">top-k (retrieval)</td><td class="val">Retrieval</td><td><strong>How many chunks</strong> are fetched from the vector database and placed in the context. The slider in the header.</td></tr>
+<tr><td class="sym" style="color:var(--acc);">similarity metric</td><td class="val">Retrieval</td><td>Usually cosine similarity. Could also be dot product or Euclidean distance.</td></tr>
+<tr><td class="sym" style="color:var(--stone);">system prompt</td><td class="val">Prompting</td><td><strong>Instructions to the LLM</strong> about how to use the context ("answer only from context", "cite sources", etc.).</td></tr>
+<tr><td class="sym" style="color:var(--purple);">temperature (T)</td><td class="val">Sampling</td><td><strong>Shape of the token distribution.</strong> Applied at the very end, after the LLM has already processed the retrieved context. <strong>Recommended: 0–0.3 for factual RAG.</strong></td></tr>
+<tr><td class="sym" style="color:var(--purple);">top-k (sampling)</td><td class="val">Sampling</td><td><strong>Truncate to top-k tokens</strong> before sampling. Note: this is a <em>different</em> top-k from the retrieval one — same name, completely different stage!</td></tr>
+<tr><td class="sym" style="color:var(--purple);">top-p (nucleus)</td><td class="val">Sampling</td><td><strong>Truncate to smallest set</strong> whose cumulative probability exceeds p, then sample.</td></tr>
+</table></div>`;
+
+  h += `<div class="info ird"><div class="il">Watch out: two different top-k's!</div>
+<strong>Retrieval top-k</strong> (rust, header slider) = how many chunks to fetch from the vector database.<br>
+<strong>Sampling top-k</strong> (purple, an LLM generation parameter) = how many vocabulary tokens to consider at each generation step.<br><br>
+Both are called "top-k" but they operate at completely different stages. In production systems you'd configure them separately — e.g., retrieval top-k = 5, sampling top-k = 50, temperature = 0.2.</div>`;
+
+  return h;
+}},
+
+// ───────────────────── 11. FAILURE MODES ─────────────────────
+{id: 'failures', title: 'Failure Modes', group: 'Deep Dive',
+render() {
+  let h = `<div class="stage-title">Failure Modes & How to Fix Them <span class="tag trd">PITFALLS</span></div>`;
+  h += `<p class="stage-desc">RAG systems fail in predictable ways. Understanding these failure modes is key to building a reliable system.</p>`;
+
+  h += `<div class="info ird"><div class="il">1 · Retrieval miss — the right chunk is never fetched</div>
+<strong>Symptom:</strong> The correct passage exists in the corpus but doesn't make it into the top-k for a reasonable query.<br>
+<strong>Causes:</strong> Poor embedding model, wrong chunk size, vocabulary mismatch between query and corpus, overly aggressive filtering.<br>
+<strong>Fixes:</strong> Swap in a stronger embedding model, use <strong>hybrid search</strong> (combine dense + BM25 keyword search), apply <strong>query rewriting</strong> (have the LLM rephrase the query first), try HyDE [6].</div>`;
+
+  h += `<div class="info ird"><div class="il">2 · "Lost in the middle"</div>
+<strong>Symptom:</strong> The relevant chunk is retrieved and placed in the context, but the LLM ignores it and answers from memory anyway.<br>
+<strong>Cause:</strong> Liu et al. (2023) showed that LLMs systematically under-attend to the middle of long contexts — the beginning and end dominate.<br>
+<strong>Fixes:</strong> Keep context short (fewer, better chunks), put the most important chunk <em>first</em>, use a cross-encoder re-ranker so the top-1 is really the most relevant.</div>`;
+
+  h += `<div class="info ird"><div class="il">3 · Context poisoning</div>
+<strong>Symptom:</strong> The retriever returns a chunk that is topically related but <em>factually wrong</em> or <em>contradicts</em> other retrieved chunks. The LLM may pick the wrong one.<br>
+<strong>Causes:</strong> Corpus contains outdated or conflicting sources; the similarity metric can't distinguish "correct" from "plausible."<br>
+<strong>Fixes:</strong> Add metadata filters (freshness, authority), use re-ranking with quality signals, have the LLM explicitly reason about conflicts in the context.</div>`;
+
+  h += `<div class="info ird"><div class="il">4 · Chunk fragmentation</div>
+<strong>Symptom:</strong> A fact is split across two chunks — the chunk boundary cuts through the middle of a key sentence — so neither chunk alone contains the answer.<br>
+<strong>Fix:</strong> Use overlapping chunks (10–20% overlap) so straddling facts appear in both. Or use structure-aware chunking.</div>`;
+
+  h += `<div class="info ird"><div class="il">5 · Prompt leakage — model answers from its own memory anyway</div>
+<strong>Symptom:</strong> The LLM confidently answers even when the retrieved context doesn't support the answer.<br>
+<strong>Fix:</strong> Strict system prompts ("use ONLY the provided context"), and evaluation datasets that specifically test "I don't know" behavior. Models like Claude are generally good at this; some base models need heavy prompting.</div>`;
+
+  h += `<div class="info iac"><div class="il">Evaluation matters</div>
+RAG systems need different metrics than either pure retrieval or pure generation:<br>
+• <strong>Retrieval metrics:</strong> recall@k, precision@k (did we get the right chunk?)<br>
+• <strong>Faithfulness:</strong> does the answer match the retrieved context? (RAGAS, TruLens)<br>
+• <strong>Answer relevance:</strong> does the answer actually address the question?<br>
+• <strong>Context relevance:</strong> did we retrieve too much irrelevant stuff?<br><br>
+Tools like <strong>RAGAS</strong>, <strong>TruLens</strong>, and <strong>DeepEval</strong> automate these evaluations.</div>`;
+
+  return h;
+}},
+
+// ───────────────────── 12. VARIANTS ─────────────────────
+{id: 'variants', title: 'Advanced Variants', group: 'Deep Dive',
+render() {
+  let h = `<div class="stage-title">Advanced RAG Variants <span class="tag tp">ADVANCED</span></div>`;
+  h += `<p class="stage-desc">The basic "embed → retrieve → stuff → generate" pipeline is now called "naive RAG". Over the past few years the field has developed many refinements. Gao et al. 2024 [8] is a good survey.</p>`;
+
+  h += `<div class="info ip"><div class="il">Query rewriting</div>
+Before embedding, pass the user's raw query through an LLM that rewrites it into one or more better search queries. For example: "what did they say about the bug yesterday?" → "error log timestamp 2025-11-19 authentication failure". Handles conversational, underspecified, or ambiguous inputs.</div>`;
+
+  h += `<div class="info ip"><div class="il">HyDE · Hypothetical Document Embeddings [6]</div>
+Ask the LLM to write a fake answer to the query first, embed that fake answer, and retrieve against it. The fake answer lives closer in vector space to real answers than the question does — queries and answers often have different vocabularies.</div>`;
+
+  h += `<div class="info ip"><div class="il">Hybrid search</div>
+Combine dense (embedding-based) retrieval with sparse (BM25 keyword) retrieval. Dense search catches semantic matches; sparse search catches exact terms and rare proper nouns. Scores are fused (e.g., <strong>reciprocal rank fusion</strong>). This is the practical default for production systems.</div>`;
+
+  h += `<div class="info ip"><div class="il">Re-ranking</div>
+After retrieving top-100 cheaply, re-score them with a slow but accurate <strong>cross-encoder</strong> and keep top-5. Adds ~100ms of latency but dramatically improves the quality of what actually reaches the LLM.</div>`;
+
+  h += `<div class="info ip"><div class="il">Multi-hop / agentic RAG</div>
+For questions that need chained reasoning ("What is the capital of the country where Marie Curie was born?"), a single retrieval is not enough. An LLM agent issues multiple retrievals, reasons over intermediate results, and composes a final answer. Frameworks like <strong>LangGraph</strong>, <strong>DSPy</strong>, and <strong>LlamaIndex Agents</strong> implement this.</div>`;
+
+  h += `<div class="info ip"><div class="il">GraphRAG</div>
+Instead of (or alongside) a vector database, extract entities and relationships from the corpus into a knowledge graph. Retrieve by traversing the graph. Microsoft's GraphRAG paper showed strong results on global-summarization queries where vector search struggles.</div>`;
+
+  h += `<div class="info ip"><div class="il">Self-RAG / Corrective RAG</div>
+The LLM can emit special tokens telling the system to retrieve more, to discard the current retrieval, or to flag low-confidence answers. The retrieval becomes a learned decision rather than a fixed pipeline stage.</div>`;
+
+  h += `<div class="info iac"><div class="il">Long-context LLMs vs RAG · complementary, not competitive</div>
+A frequent question: "Now that LLMs have 1M-token context windows, do we still need RAG?" Yes. Long-context helps, but RAG still wins on:<br>
+<strong>1. Cost</strong> — sending 1M tokens per query is ~1000× more expensive than retrieving and sending 10k.<br>
+<strong>2. Latency</strong> — long-context forward passes are slow; retrieval + short context is faster.<br>
+<strong>3. Freshness</strong> — the corpus can update independently of the model.<br>
+<strong>4. Auditability</strong> — citing specific retrieved chunks is cleaner than "somewhere in the 1M tokens I fed you".<br>
+<strong>5. Accuracy</strong> — even with long contexts, LLMs exhibit "lost in the middle". Focused context beats sprawling context.</div>`;
+
+  return h;
+}},
+
+// ───────────────────── 13. QUIZ ─────────────────────
+{id: 'quiz', title: 'Quiz', group: 'Quiz',
+render() {
+  let h = `<div class="stage-title">Test Your Understanding <span class="tag tg">QUIZ</span></div>`;
+  h += `<p class="stage-desc">Seven questions covering the RAG pipeline end to end.</p>`;
+
+  const questions = [
+    {
+      q: "What problem does RAG primarily solve?",
+      opts: [
+        {t: "It makes the LLM faster at inference", ok: false},
+        {t: "It grounds LLM outputs in retrieved source documents, addressing hallucination, knowledge cutoff, and lack of traceability", ok: true},
+        {t: "It reduces the number of parameters in the LLM", ok: false},
+        {t: "It replaces the need for any LLM", ok: false},
+      ],
+      fb: "RAG addresses four problems of closed-book LLMs simultaneously: hallucination, knowledge cutoff, lack of traceability, and expensive updating. The LLM becomes a reading-comprehension engine over a live corpus."
+    },
+    {
+      q: "Why is it critical to embed the query with the SAME model used for the corpus?",
+      opts: [
+        {t: "For licensing reasons", ok: false},
+        {t: "Different models produce vectors in different, incomparable vector spaces — cosine similarity across spaces is meaningless", ok: true},
+        {t: "Mixing models is slower", ok: false},
+        {t: "It's not critical, any embedding model works", ok: false},
+      ],
+      fb: "Each embedding model has its own learned geometry. A vector from model A and a vector from model B live in fundamentally different spaces, so their dot product has no semantic meaning. Always use one model consistently."
+    },
+    {
+      q: "Why are vectors L2-normalized before computing similarity?",
+      opts: [
+        {t: "To save disk space", ok: false},
+        {t: "So cosine similarity reduces to a simple dot product, and similarity depends only on direction (meaning) not magnitude", ok: true},
+        {t: "Because it's required by the BM25 algorithm", ok: false},
+        {t: "Because unnormalized vectors would overflow", ok: false},
+      ],
+      fb: "With ||v|| = 1 for all vectors, cosine(a,b) = a·b — a single dot product instead of divisions. And the ranking depends on angle (meaning) not length (which is often an arbitrary artifact of the embedding model)."
+    },
+    {
+      q: "What is the main disadvantage of very large chunks (~2000 tokens)?",
+      opts: [
+        {t: "They're slower to embed", ok: false},
+        {t: "Retrieval becomes less precise because the relevant sentence is buried among irrelevant ones, and fewer chunks fit in the LLM's context window", ok: true},
+        {t: "Cosine similarity doesn't work on long chunks", ok: false},
+        {t: "They can't be stored in vector databases", ok: false},
+      ],
+      fb: "Large chunks give you more context per chunk, but the embedding becomes a fuzzy average of many topics, hurting retrieval precision. You also can't fit many of them in the LLM's context window."
+    },
+    {
+      q: "What does HyDE (Hypothetical Document Embeddings) do?",
+      opts: [
+        {t: "It embeds queries and documents into different spaces", ok: false},
+        {t: "It asks an LLM to write a fake answer to the query first, then embeds that fake answer and retrieves against it", ok: true},
+        {t: "It uses only the first word of the query", ok: false},
+        {t: "It's another name for BM25", ok: false},
+      ],
+      fb: "HyDE's insight: a fake answer lives closer in vector space to real answers than a question does, because questions and answers use different vocabularies. Embed the fake answer and search with that."
+    },
+    {
+      q: "In the 'lost in the middle' phenomenon, what does the LLM do?",
+      opts: [
+        {t: "Loses the beginning of the context", ok: false},
+        {t: "Systematically under-attends to information placed in the middle of a long context, favoring the beginning and end", ok: true},
+        {t: "Randomly deletes tokens from the middle", ok: false},
+        {t: "Only works if the query is in the middle", ok: false},
+      ],
+      fb: "Liu et al. 2023 showed that LLMs have U-shaped attention to long contexts: they use the first few and last few chunks but often ignore what's in the middle. Keep contexts short and put the most important chunk first."
+    },
+    {
+      q: "After training, how do you update a RAG system's knowledge with new information?",
+      opts: [
+        {t: "Re-train the LLM from scratch", ok: false},
+        {t: "Fine-tune the LLM on the new data", ok: false},
+        {t: "Add the new documents to the vector database — the LLM doesn't need to change", ok: true},
+        {t: "RAG systems can't be updated", ok: false},
+      ],
+      fb: "This is RAG's biggest operational advantage: knowledge lives in the vector database, not the model weights. Updating knowledge means adding documents — no retraining, no fine-tuning, no redeployment of the LLM."
+    },
+  ];
+
+  questions.forEach((q, i) => {
+    h += `<div class="quiz-q">
+<div class="qnum">Question ${i + 1}</div>
+<div class="qtext">${q.q}</div>`;
+    q.opts.forEach(o => {
+      h += `<button class="quiz-opt" onclick="quizCheck(this, ${o.ok}, 'q${i}fb')">${o.t}</button>`;
+    });
+    h += `<div class="quiz-fb" id="q${i}fb">${q.fb}</div>`;
+    h += `</div>`;
+  });
+
+  h += `<div class="info iac"><div class="il">Done!</div>You now understand the full RAG pipeline: from document chunking through embedding, indexing, query-time similarity search, top-k selection, prompt augmentation, and grounded generation — plus the common failure modes and advanced variants. The surveys [8] and the original RAG paper [1] are good next reads.</div>`;
+
+  return h;
+}},
+
+];
+
+// ═══════ APP STATE ═══════
+let currentStep = 0;
+
+function renderSidebar() {
+  const sb = document.getElementById('sidebar');
+  let h = '<div class="side-label">RAG walkthrough</div>';
+  const groups = {};
+  STEPS.forEach((s, i) => {
+    if (!groups[s.group]) groups[s.group] = [];
+    groups[s.group].push(i);
+  });
+  Object.keys(groups).forEach((g, gi) => {
+    h += `<div class="side-label" style="margin-top:0.4rem;">${g}</div>`;
+    groups[g].forEach(si => {
+      const s = STEPS[si];
+      const cls = si === currentStep ? 'on' : si < currentStep ? 'done' : '';
+      h += `<button class="step-btn ${cls}" onclick="goStep(${si})"><span class="step-num">${si < currentStep ? '✓' : si + 1}</span>${s.title}</button>`;
+    });
+    if (gi < Object.keys(groups).length - 1) h += `<div class="step-divider"></div>`;
+  });
+  sb.innerHTML = h;
+}
+
+function renderMain() {
+  const el = document.getElementById('main-content');
+  const s = STEPS[currentStep];
+  const q = NORMALIZED_QUERIES[QUERY_IDX];
+  let h = `<div class="config">`;
+  h += `<div class="cfg-item">N=<span>${CORPUS.length}</span></div>`;
+  h += `<div class="cfg-item">d=<span>${CORPUS[0].vec.length}</span></div>`;
+  h += `<div class="cfg-item">k=<span>${TOP_K}</span></div>`;
+  h += `<div class="cfg-item">query=<span>"${q.text}"</span></div>`;
+  h += `<div class="cfg-item" style="margin-left:auto;">step <span>${currentStep+1}</span>/${STEPS.length}</div>`;
+  h += `</div>`;
+  h += s.render();
+  h += `<div class="nav-row">`;
+  h += `<button class="nav-btn nav-prev" onclick="goStep(${currentStep-1})" ${currentStep===0?'disabled':''}>← Previous</button>`;
+  h += `<button class="nav-btn nav-next" onclick="goStep(${currentStep+1})" ${currentStep===STEPS.length-1?'disabled':''}>${currentStep===STEPS.length-1?'Complete':'Next →'}</button>`;
+  h += `</div>`;
+  el.innerHTML = h;
+}
+
+function goStep(n) {
+  if (n < 0 || n >= STEPS.length) return;
+  currentStep = n;
+  renderSidebar();
+  renderMain();
+  document.getElementById('main-content').scrollTop = 0;
+}
+
+function onQueryChange() {
+  QUERY_IDX = parseInt(document.getElementById('query-select').value);
+  renderMain();
+}
+
+function onKChange() {
+  TOP_K = parseInt(document.getElementById('k-slider').value);
+  document.getElementById('k-val').textContent = TOP_K;
+  renderMain();
+}
+
+function onChunkSizeChange(v) {
+  CHUNK_SIZE = parseInt(v);
+  // Ensure overlap is always strictly less than chunk size
+  if (CHUNK_OVERLAP >= CHUNK_SIZE) CHUNK_OVERLAP = Math.max(0, CHUNK_SIZE - 5);
+  renderMain();
+}
+
+function onChunkOverlapChange(v) {
+  CHUNK_OVERLAP = parseInt(v);
+  if (CHUNK_OVERLAP >= CHUNK_SIZE) CHUNK_OVERLAP = Math.max(0, CHUNK_SIZE - 5);
+  renderMain();
+}
+
+function quizCheck(btn, ok, fbId) {
+  const q = btn.parentElement;
+  if (q.dataset.answered) return;
+  q.dataset.answered = '1';
+  if (ok) {
+    btn.classList.add('right');
+  } else {
+    btn.classList.add('wrong');
+    q.querySelectorAll('.quiz-opt').forEach(o => {
+      const oc = o.getAttribute('onclick');
+      if (oc && oc.includes('true')) o.classList.add('right');
+    });
+  }
+  document.getElementById(fbId).classList.add('show');
+}
+
+// ═══════ INIT ═══════
+renderSidebar();
+renderMain();
+</script>
+</body>
+</html>
