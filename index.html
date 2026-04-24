@@ -7,12 +7,41 @@
     <meta name="description" content="A collection of interactive tools for learning machine learning concepts step by step. Built for ML lectures SS2026 HKA/EIT.">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root{--o50:#fff7ed;--o100:#ffedd5;--o200:#fed7aa;--o300:#fdba74;--o400:#fb923c;--o500:#f97316;--o600:#ea580c;--o700:#c2410c;--g50:#fafafa;--g100:#f4f4f5;--g200:#e4e4e7;--g300:#d4d4d8;--g400:#a1a1aa;--g500:#71717a;--g600:#52525b;--g700:#3f3f46;--g800:#27272a;--g900:#18181b;--b500:#3b82f6;--b50:#eff6ff;--gn500:#22c55e;--gn50:#f0fdf4;--p500:#a855f7;--p50:#faf5ff;--t500:#14b8a6;--t50:#f0fdfa;--t200:#99f6e4;--t700:#0f766e;}
-        *{margin:0;padding:0;box-sizing:border-box;}
-        body{font-family:'DM Sans',sans-serif;background:#fafaf9;color:var(--g900);min-height:100vh;overflow-x:hidden;}
-        body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(251,146,60,0.06),transparent),radial-gradient(ellipse 60% 40% at 80% 100%,rgba(20,184,166,0.04),transparent);pointer-events:none;z-index:0;}
-        body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,0,0,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.015) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
-        .wrap{position:relative;z-index:1;max-width:1060px;margin:0 auto;padding:4rem 1.5rem 3rem;}
+        :root{
+  /* ORANGE (primary accent) */
+  --o50:#fff7ed;
+  --o100:#ffedd5;
+  --o200:#fed7aa;
+  --o300:#fdba74;
+  --o400:#fb923c;
+  --o500:#f97316;
+  --o600:#ea580c;
+  --o700:#c2410c;
+
+  /* GRAY (base UI) */
+  --g50:#fafafa;
+  --g100:#f4f4f5;
+  --g200:#e4e4e7;
+  --g300:#d4d4d8;
+  --g400:#a1a1aa;
+  --g500:#71717a;
+  --g600:#52525b;
+  --g700:#3f3f46;
+  --g800:#27272a;
+  --g900:#18181b;
+
+  /* REMOVE other color identities */
+  --b500: var(--o500);
+  --b50: var(--o50);
+  --gn500: var(--o500);
+  --gn50: var(--o50);
+  --p500: var(--o500);
+  --p50: var(--o50);
+  --t500: var(--o500);
+  --t50: var(--o50);
+  --t200: var(--o200);
+  --t700: var(--o700);
+}
 
         /* Header */
         header{text-align:center;margin-bottom:3.5rem;}
@@ -66,7 +95,7 @@
         .tag.t{background:var(--t50);color:var(--t700);}
 
         /* Tour section */
-        .tour-section{background:linear-gradient(135deg,#f0fdfa 0%,#ecfdf5 50%,#f0fdf4 100%);border:1px solid var(--t200);border-radius:18px;padding:2rem 2rem 1.5rem;margin-top:1rem;position:relative;overflow:hidden;}
+        .tour-section{background:linear-gradient(135deg,#fff7ed 0%,#ffedd5 50%,#fed7aa 100%);border:1px solid var(--o200);border-radius:18px;padding:2rem 2rem 1.5rem;margin-top:1rem;position:relative;overflow:hidden;}
         .tour-section::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--t500),#22c55e);}
         .tour-section::after{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(20,184,166,0.08),transparent 70%);pointer-events:none;}
         .tour-section .section-head{margin-top:0;}
@@ -106,7 +135,6 @@
         <h1>Machine Learning<br><span>Explained</span></h1>
         <p class="subtitle">Interactive tools for understanding ML algorithms step by step. Pick a topic and start exploring.</p>
         <div class="header-meta">
-            <span class="semester">SS2026 · HKA / EIT</span>
             <span class="meta-dot"></span>
             <span class="tool-count"><strong>11</strong> interactive apps</span>
             <span class="meta-dot"></span>
@@ -251,7 +279,18 @@
     </div>
 
     <footer>
-        <p>Built for the ML course — <a href="https://github.com/abka0002/Machine-Learning-Explained" target="_blank" rel="noopener">View on GitHub</a></p>
+        <p>
+  Built by 
+  <strong>
+    <a href="https://www.linkedin.com/feed/" target="_blank" rel="noopener">
+      Dr. Kawther Aboalam
+    </a>
+  </strong> 
+  and AI-Agents — 
+  <a href="https://github.com/abka0002/Machine-Learning-Explained" target="_blank" rel="noopener">
+    View on GitHub
+  </a>
+</p>
     </footer>
 </div>
 </body>
