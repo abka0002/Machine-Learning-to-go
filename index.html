@@ -5,302 +5,254 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Machine Learning Explained — Interactive ML Tools</title>
     <meta name="description" content="A collection of interactive tools for learning machine learning concepts step by step. Built for ML lectures SS2026 HKA/EIT.">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --o50:#fff7ed;--o100:#ffedd5;--o200:#fed7aa;--o300:#fdba74;
-            --o400:#fb923c;--o500:#f97316;--o600:#ea580c;--o700:#c2410c;
-            --g50:#fafafa;--g100:#f4f4f5;--g200:#e4e4e7;--g300:#d4d4d8;
-            --g400:#a1a1aa;--g500:#71717a;--g600:#52525b;--g700:#3f3f46;
-            --g800:#27272a;--g900:#18181b;
-            --b500:#3b82f6;--b50:#eff6ff;
-            --gn500:#22c55e;--gn50:#f0fdf4;
-            --p500:#a855f7;--p50:#faf5ff;
-        }
+        :root{--o50:#fff7ed;--o100:#ffedd5;--o200:#fed7aa;--o300:#fdba74;--o400:#fb923c;--o500:#f97316;--o600:#ea580c;--o700:#c2410c;--g50:#fafafa;--g100:#f4f4f5;--g200:#e4e4e7;--g300:#d4d4d8;--g400:#a1a1aa;--g500:#71717a;--g600:#52525b;--g700:#3f3f46;--g800:#27272a;--g900:#18181b;--b500:#3b82f6;--b50:#eff6ff;--gn500:#22c55e;--gn50:#f0fdf4;--p500:#a855f7;--p50:#faf5ff;--t500:#14b8a6;--t50:#f0fdfa;--t200:#99f6e4;--t700:#0f766e;}
         *{margin:0;padding:0;box-sizing:border-box;}
-        body{font-family:'DM Sans',sans-serif;background:var(--g50);color:var(--g900);min-height:100vh;overflow-x:hidden;}
+        body{font-family:'DM Sans',sans-serif;background:#fafaf9;color:var(--g900);min-height:100vh;overflow-x:hidden;}
+        body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(251,146,60,0.06),transparent),radial-gradient(ellipse 60% 40% at 80% 100%,rgba(20,184,166,0.04),transparent);pointer-events:none;z-index:0;}
+        body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,0,0,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.015) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+        .wrap{position:relative;z-index:1;max-width:1060px;margin:0 auto;padding:4rem 1.5rem 3rem;}
 
-        body::before{content:'';position:fixed;inset:0;
-            background-image:
-                linear-gradient(rgba(0,0,0,0.018) 1px,transparent 1px),
-                linear-gradient(90deg,rgba(0,0,0,0.018) 1px,transparent 1px);
-            background-size:52px 52px;pointer-events:none;z-index:0;}
-
-        .wrap{position:relative;z-index:1;max-width:1020px;margin:0 auto;padding:3.5rem 1.5rem 4rem;}
-
-        /* ── Header ── */
+        /* Header */
         header{text-align:center;margin-bottom:3.5rem;}
-        .pill{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:0.65rem;font-weight:600;
-            letter-spacing:0.1em;text-transform:uppercase;color:var(--o600);background:var(--o50);
-            border:1px solid var(--o200);padding:0.3rem 0.8rem;border-radius:100px;margin-bottom:1.4rem;}
-        h1{font-size:clamp(2.2rem,5vw,3.2rem);font-weight:700;line-height:1.08;letter-spacing:-0.03em;margin-bottom:0.8rem;}
-        h1 span{background:linear-gradient(135deg,var(--o500),var(--o700));
-            -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-        .subtitle{font-size:1.05rem;color:var(--g500);max-width:540px;margin:0 auto;line-height:1.6;}
-        .semester{font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--g400);margin-top:0.6rem;}
-        .divider{width:48px;height:3px;background:linear-gradient(90deg,var(--o400),var(--o600));
-            border-radius:2px;margin:2.5rem auto 2.5rem;}
+        .pill{display:inline-flex;align-items:center;gap:0.45rem;font-family:'JetBrains Mono',monospace;font-size:0.6rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--o600);background:var(--o50);border:1px solid var(--o200);padding:0.35rem 0.9rem;border-radius:100px;margin-bottom:1.6rem;}
+        .pill-dot{width:5px;height:5px;border-radius:50%;background:var(--o500);animation:pulse 2s ease-in-out infinite;}
+        @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+        h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.6rem,5.5vw,3.8rem);font-weight:800;line-height:1.05;letter-spacing:-0.03em;margin-bottom:0.9rem;}
+        h1 span{background:linear-gradient(135deg,var(--o500) 0%,var(--o700) 50%,#b91c1c 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+        .subtitle{font-size:1.08rem;color:var(--g500);max-width:520px;margin:0 auto;line-height:1.65;font-weight:300;}
+        .header-meta{display:flex;align-items:center;justify-content:center;gap:1.5rem;margin-top:1.2rem;flex-wrap:wrap;}
+        .semester{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--g400);}
+        .tool-count{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--g400);display:flex;align-items:center;gap:0.35rem;}
+        .tool-count strong{color:var(--o600);font-weight:600;}
+        .meta-dot{width:3px;height:3px;border-radius:50%;background:var(--g300);}
 
-        /* ── Category labels ── */
-        .cat-label{font-family:'JetBrains Mono',monospace;font-size:0.68rem;font-weight:600;
-            letter-spacing:0.12em;text-transform:uppercase;color:var(--g400);margin-bottom:1.2rem;margin-top:2.8rem;}
-        .cat-label:first-of-type{margin-top:0;}
+        .divider{display:flex;align-items:center;gap:12px;margin:2.5rem 0 2rem;}
+        .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--g200);}
+        .divider-icon{width:32px;height:32px;border-radius:8px;background:#fff;border:1px solid var(--g200);display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;}
 
-        /* ── Card grid ── */
-        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:1.2rem;}
+        /* Section headers */
+        .section-head{display:flex;align-items:center;gap:1rem;margin-bottom:1.35rem;margin-top:0.75rem;background:rgba(255,255,255,0.86);border:1px solid var(--g200);border-left:5px solid var(--o500);border-radius:18px;padding:1rem 1.15rem;box-shadow:0 10px 30px rgba(24,24,27,0.04),0 1px 3px rgba(24,24,27,0.04);position:relative;}
+        .section-head::after{content:'';position:absolute;inset:0;border-radius:18px;background:linear-gradient(90deg,rgba(249,115,22,0.05),transparent 52%);pointer-events:none;}
+        .section-icon{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;flex-shrink:0;box-shadow:0 6px 18px rgba(24,24,27,0.05);position:relative;z-index:1;}
+        .si-o{background:var(--o50);border:1px solid var(--o200);}
+        .si-p{background:var(--p50);border:1px solid #e9d5ff;}
+        .si-t{background:var(--t50);border:1px solid var(--t200);}
+        .section-label{font-family:'Fraunces',Georgia,serif;font-size:clamp(1.45rem,2.7vw,2.15rem);font-weight:800;letter-spacing:-0.025em;text-transform:none;color:var(--g900);line-height:1.05;position:relative;z-index:1;}
+        .section-count{font-family:'JetBrains Mono',monospace;font-size:0.68rem;font-weight:700;color:var(--o700);background:var(--o50);border:1px solid var(--o200);padding:0.35rem 0.75rem;border-radius:100px;margin-left:auto;position:relative;z-index:1;white-space:nowrap;}
 
-        .card{background:#fff;border:1px solid var(--g200);border-radius:14px;padding:1.6rem;
-            text-decoration:none;color:inherit;
-            transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
-            position:relative;overflow:hidden;display:flex;flex-direction:column;}
-        .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
-            background:linear-gradient(90deg,var(--o400),var(--o600));opacity:0;transition:opacity 0.25s;}
-        .card:hover{border-color:var(--o300);
-            box-shadow:0 8px 30px rgba(249,115,22,0.08),0 2px 8px rgba(0,0,0,0.04);
-            transform:translateY(-2px);}
+        /* Card grid */
+        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;margin-bottom:2rem;}
+        .card{background:#fff;border:1px solid var(--g200);border-radius:14px;padding:1.5rem 1.5rem 1.3rem;text-decoration:none;color:inherit;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);position:relative;overflow:hidden;display:flex;flex-direction:column;}
+        .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--o400),var(--o600));opacity:0;transition:opacity 0.3s;}
+        .card:hover{border-color:var(--o300);box-shadow:0 8px 30px rgba(249,115,22,0.07),0 1px 4px rgba(0,0,0,0.04);transform:translateY(-3px);}
         .card:hover::before{opacity:1;}
-
-        .card-head{display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:1rem;}
-        .card-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;
-            justify-content:center;font-size:1.2rem;flex-shrink:0;}
+        .card:hover .card-arrow{opacity:1;transform:translate(0,0);}
+        .card:hover .card-icon{transform:scale(1.08) rotate(-3deg);}
+        .card-head{display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:0.9rem;}
+        .card-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;transition:transform 0.3s;}
         .ico-o{background:var(--o50);border:1px solid var(--o200);}
         .ico-b{background:var(--b50);border:1px solid #bfdbfe;}
         .ico-g{background:var(--gn50);border:1px solid #bbf7d0;}
         .ico-p{background:var(--p50);border:1px solid #e9d5ff;}
+        .card-arrow{position:absolute;top:1.5rem;right:1.5rem;width:24px;height:24px;border-radius:6px;background:var(--g100);display:flex;align-items:center;justify-content:center;opacity:0;transform:translate(-4px,4px);transition:all 0.3s;}
+        .card-arrow svg{width:12px;height:12px;color:var(--g500);}
+        .card-lecture{font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--o600);margin-bottom:0.3rem;}
+        .card-title{font-size:1rem;font-weight:650;color:var(--g900);margin-bottom:0.45rem;letter-spacing:-0.01em;line-height:1.3;}
+        .card-desc{font-size:0.82rem;color:var(--g500);line-height:1.6;flex-grow:1;}
+        .card-tags{display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.9rem;padding-top:0.8rem;border-top:1px solid var(--g100);}
+        .tag{font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:500;letter-spacing:0.04em;padding:0.2rem 0.5rem;border-radius:4px;background:var(--g100);color:var(--g600);}
+        .tag.t{background:var(--t50);color:var(--t700);}
 
-        .card-title{font-size:1rem;font-weight:650;color:var(--g900);margin-bottom:0.4rem;letter-spacing:-0.01em;}
-        .card-desc{font-size:0.84rem;color:var(--g500);line-height:1.55;flex-grow:1;}
+        /* Tour section */
+        .tour-section{background:linear-gradient(135deg,#f0fdfa 0%,#ecfdf5 50%,#f0fdf4 100%);border:1px solid var(--t200);border-radius:18px;padding:2rem 2rem 1.5rem;margin-top:1rem;position:relative;overflow:hidden;}
+        .tour-section::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--t500),#22c55e);}
+        .tour-section::after{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(20,184,166,0.08),transparent 70%);pointer-events:none;}
+        .tour-section .section-head{margin-top:0;}
+        .tour-langs{display:flex;gap:1rem;margin-top:1rem;flex-wrap:wrap;}
+        .tour-lang-group{flex:1;min-width:280px;}
+        .lang-pill{display:inline-flex;align-items:center;gap:0.4rem;font-family:'JetBrains Mono',monospace;font-size:0.58rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:0.25rem 0.6rem;border-radius:6px;margin-bottom:0.7rem;}
+        .lang-pill.en{background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;}
+        .lang-pill.de{background:#fefce8;color:#a16207;border:1px solid #fde68a;}
+        .tour-card{background:#fff;border:1px solid #d1fae5;border-radius:12px;padding:1.2rem 1.3rem;text-decoration:none;color:inherit;display:flex;gap:0.9rem;align-items:flex-start;transition:all 0.3s;position:relative;}
+        .tour-card:hover{border-color:var(--t500);box-shadow:0 6px 24px rgba(20,184,166,0.1),0 1px 4px rgba(0,0,0,0.03);transform:translateY(-2px);}
+        .tour-card:hover .tour-card-icon{transform:scale(1.1);}
+        .tour-card-icon{width:38px;height:38px;border-radius:9px;background:var(--t50);border:1px solid var(--t200);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;transition:transform 0.3s;}
+        .tour-card-body{flex:1;min-width:0;}
+        .tour-card-title{font-size:0.92rem;font-weight:650;color:var(--g900);margin-bottom:0.3rem;}
+        .tour-card-desc{font-size:0.78rem;color:var(--g500);line-height:1.6;}
+        .tour-card-tags{display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.6rem;}
+        .tour-card-tags .tag{font-size:0.52rem;}
+        .tour-card-arrow{position:absolute;top:1.2rem;right:1.2rem;color:var(--t500);opacity:0;transition:all 0.3s;transform:translateX(-4px);font-weight:600;}
+        .tour-card:hover .tour-card-arrow{opacity:1;transform:translateX(0);}
 
-        .card-tags{display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:1rem;padding-top:0.85rem;border-top:1px solid var(--g100);}
-        .tag{font-family:'JetBrains Mono',monospace;font-size:0.58rem;font-weight:500;
-            letter-spacing:0.04em;padding:0.18rem 0.5rem;border-radius:4px;background:var(--g100);color:var(--g600);}
-        .tag.a{background:var(--o50);color:var(--o700);}
-        .tag.ext{background:#fef2f2;color:#dc2626;}
-
-        .ext-badge{font-family:'JetBrains Mono',monospace;font-size:0.58rem;font-weight:600;
-            letter-spacing:0.06em;text-transform:uppercase;color:var(--b500);background:var(--b50);
-            border:1px solid #bfdbfe;padding:0.15rem 0.45rem;border-radius:4px;margin-left:auto;white-space:nowrap;}
-
-        .card.soon{opacity:0.45;pointer-events:none;}
-        .card.soon .card-icon{background:var(--g100);border-color:var(--g200);}
-        .soon-badge{font-family:'JetBrains Mono',monospace;font-size:0.58rem;font-weight:600;
-            letter-spacing:0.08em;text-transform:uppercase;color:var(--g400);background:var(--g100);
-            padding:0.15rem 0.45rem;border-radius:4px;margin-left:auto;}
-
-        footer{margin-top:4rem;text-align:center;padding:2rem 0;border-top:1px solid var(--g200);}
+        /* Footer */
+        footer{margin-top:3rem;text-align:center;padding:2rem 0;border-top:1px solid var(--g200);}
         footer p{font-size:0.78rem;color:var(--g400);}
         footer a{color:var(--o500);text-decoration:none;font-weight:500;}
         footer a:hover{text-decoration:underline;}
 
-        @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
-        .card{animation:fadeUp 0.5s ease both;}
-        .card:nth-child(1){animation-delay:0.05s;}
-        .card:nth-child(2){animation-delay:0.12s;}
-        .card:nth-child(3){animation-delay:0.19s;}
-        .card:nth-child(4){animation-delay:0.26s;}
-        .card:nth-child(5){animation-delay:0.33s;}
-        .card:nth-child(6){animation-delay:0.40s;}
-
-        @media(max-width:600px){.wrap{padding:2rem 1rem 3rem;}header{margin-bottom:2.5rem;}.grid{grid-template-columns:1fr;}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+        .card,.tour-card{animation:fadeUp 0.5s ease both;}
+        .grid .card:nth-child(1){animation-delay:0.04s;}.grid .card:nth-child(2){animation-delay:0.1s;}.grid .card:nth-child(3){animation-delay:0.16s;}.grid .card:nth-child(4){animation-delay:0.22s;}.grid .card:nth-child(5){animation-delay:0.28s;}.grid .card:nth-child(6){animation-delay:0.34s;}.grid .card:nth-child(7){animation-delay:0.40s;}
+        @media(max-width:600px){.wrap{padding:2rem 1rem 2rem;}header{margin-bottom:2.5rem;}.section-head{align-items:flex-start;padding:0.95rem 1rem;gap:0.8rem;}.section-icon{width:40px;height:40px;font-size:1.08rem;}.section-label{font-size:1.35rem;}.section-count{font-size:0.58rem;padding:0.28rem 0.55rem;}.grid{grid-template-columns:1fr;}.tour-section{padding:1.5rem 1.2rem 1.2rem;}.tour-langs{flex-direction:column;gap:0.8rem;}}
     </style>
 </head>
 <body>
 <div class="wrap">
-
     <header>
-        <div class="pill">Open-Source Learning Tools</div>
-        <h1>Machine Learning <span>Explained</span></h1>
+        <div class="pill"><span class="pill-dot"></span>Open-Source Learning Tools</div>
+        <h1>Machine Learning<br><span>Explained</span></h1>
         <p class="subtitle">Interactive tools for understanding ML algorithms step by step. Pick a topic and start exploring.</p>
-        <div class="semester">ML Lectures SS2026 · HKA / EIT</div>
+        <div class="header-meta">
+            <span class="semester">SS2026 · HKA / EIT</span>
+            <span class="meta-dot"></span>
+            <span class="tool-count"><strong>11</strong> interactive apps</span>
+            <span class="meta-dot"></span>
+            <span class="tool-count"><strong>2</strong> guided tours</span>
+        </div>
     </header>
 
-    <div class="divider"></div>
+    <div class="divider"><div class="divider-icon">📚</div></div>
 
-    
-    <div class="cat-label"> </div>
+    <div class="section-head">
+        <div class="section-icon si-o">⚙️</div>
+        <span class="section-label">ML Foundations</span>
+        <span class="section-count">7 tools</span>
+    </div>
     <div class="grid">
-
         <a href="./DataPreparationAndFeatureEngineering/" class="card">
-            <div class="card-head">
-                <div class="card-icon ico-o">🔧</div>
-            </div>
-            <div class="card-title">Data Preparation And Feature Engineering</div>
-            <div class="card-desc">Complete pipeline from data types through EDA (descriptive stats, box plots, scatter plots, segmentation) to imputation, scaling, encoding, and feature selection — all with the Heart Failure dataset.</div>
-            <div class="card-tags">
-                <span class="tag a">ML_02 / ML_03</span>
-                <span class="tag">EDA</span>
-                <span class="tag">Preparation</span>
-                <span class="tag">Interactive</span>
-            </div>
-
-
+            <div class="card-arrow"><svg viewBox="0 0 16 16" fill="none"><path d="M4 12L12 4M12 4H6M12 4v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="card-head"><div class="card-icon ico-o">🔧</div><div><div class="card-lecture">ML_02 / ML_03</div><div class="card-title">Data Preparation & Feature Engineering</div></div></div>
+            <div class="card-desc">Complete pipeline from data types through EDA to imputation, scaling, encoding, and feature selection — all with the Heart Failure dataset.</div>
+            <div class="card-tags"><span class="tag">EDA</span><span class="tag">Preparation</span><span class="tag">Interactive</span></div>
         </a>
-
         <a href="./LinearRegression/" class="card">
-            <div class="card-head">
-                <div class="card-icon ico-b">📈</div>
-            </div>
-            <div class="card-title">Linear Regression</div>
-            <div class="card-desc">Simple and Multiple Linear Regression Deployment</div>
-            <div class="card-tags">
-                <span class="tag a">Evaluation Metrics</span>
-                <span class="tag">Regularization</span>
-                <span class="tag">  Grid Search and K-Fold Cross Validation </span>
-            </div>
-        </a>        
-
+            <div class="card-arrow"><svg viewBox="0 0 16 16" fill="none"><path d="M4 12L12 4M12 4H6M12 4v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="card-head"><div class="card-icon ico-b">📈</div><div><div class="card-title">Linear Regression</div></div></div>
+            <div class="card-desc">Simple and Multiple Linear Regression with evaluation metrics, regularization, Grid Search and K-Fold Cross Validation.</div>
+            <div class="card-tags"><span class="tag">Evaluation Metrics</span><span class="tag">Regularization</span><span class="tag">Cross Validation</span></div>
+        </a>
         <a href="./CategoricalNumericalAssociations/" class="card">
-            <div class="card-head">
-                <div class="card-icon ico-b">📈</div>
-            </div>
-            <div class="card-title">η² Categorical Numerical Associations</div>
-            <div class="card-desc">An interactive explainer — effect size for categorical → numerical associations</div>
-            <div class="card-tags">
-                <span class="tag a">NC Association</span>
-                <span class="tag">Explained Variance</span>
-                <span class="tag"> Data Preparation </span>
-            </div>
-        </a> 
-        
-
+            <div class="card-arrow"><svg viewBox="0 0 16 16" fill="none"><path d="M4 12L12 4M12 4H6M12 4v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="card-head"><div class="card-icon ico-b">📊</div><div><div class="card-title">η² Categorical–Numerical Associations</div></div></div>
+            <div class="card-desc">An interactive explainer — effect size for categorical → numerical associations and explained variance.</div>
+            <div class="card-tags"><span class="tag">NC Association</span><span class="tag">Explained Variance</span><span class="tag">Data Prep</span></div>
+        </a>
         <a href="./BiasAndVariance/" class="card">
-            <div class="card-head">
-                <div class="card-icon ico-b">🎯</div>
-            </div>
-            <div class="card-title">Bias And Variance Tradeoff</div>
-            <div class="card-desc">Bias–Variance & Generalization Explorer: Inspired by Raschka, STAT 479: Model Evaluation 1 – Overfitting and Underfitting</div>
-            <div class="card-tags">
-                <span class="tag a">Overfitting vs. underfitting</span>
-                <span class="tag">Bias–variance decomposition of the squared loss</span>
-                <span class="tag"> S. Raschka </span>
-            </div>
-        </a>    
-
+            <div class="card-arrow"><svg viewBox="0 0 16 16" fill="none"><path d="M4 12L12 4M12 4H6M12 4v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="card-head"><div class="card-icon ico-b">🎯</div><div><div class="card-title">Bias & Variance Tradeoff</div></div></div>
+            <div class="card-desc">Bias–Variance & Generalization Explorer. Inspired by S. Raschka, STAT 479 — Overfitting and Underfitting.</div>
+            <div class="card-tags"><span class="tag">Overfitting</span><span class="tag">Bias–Variance</span><span class="tag">S. Raschka</span></div>
+        </a>
         <a href="./GridsearchCrossValidation/" class="card">
-            <div class="card-head">
-                <div class="card-icon ico-b">⚖️</div>
-            </div>
-            <div class="card-title">Grid Search & K-Fold Cross Validation</div>
-            <div class="card-desc">Discover how GridSearchCV from Scikit-Learn calculates the mean and standard deviation of validation folds to find the best α for a Lasso regression Model, and how refit=True fully leverages your training data.</div>
-            <div class="card-tags">
-                <span class="tag a">Gridsearch</span>
-                <span class="tag">K-Fold Cross Validation</span>
-                <span class="tag">Scikit-Learn</span>
-            </div>
+            <div class="card-arrow"><svg viewBox="0 0 16 16" fill="none"><path d="M4 12L12 4M12 4H6M12 4v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="card-head"><div class="card-icon ico-b">⚖️</div><div><div class="card-title">Grid Search & K-Fold Cross Validation</div></div></div>
+            <div class="card-desc">How GridSearchCV calculates validation-fold statistics to find the best α for Lasso, and how refit=True leverages your full training data.</div>
+            <div class="card-tags"><span class="tag">GridSearch</span><span class="tag">K-Fold CV</span><span class="tag">Scikit-Learn</span></div>
         </a>
-
         <a href="./SklearnPipeline/" class="card">
-            <div class="card-head">
-                <div class="card-icon ico-b">🔧</div>
-            </div>
-            <div class="card-title">Sklearn-Pipeline</div>
-            <div class="card-desc">Explaining How can sklearn pipeline Chaining preprocessing steps and a model into a single, reproducible workflow.</div>
-            <div class="card-tags">
-                <span class="tag a">Preprocessing</span>
-                <span class="tag">Pipelines</span>
-                <span class="tag">Scikit-Learn</span>
-            </div>
+            <div class="card-arrow"><svg viewBox="0 0 16 16" fill="none"><path d="M4 12L12 4M12 4H6M12 4v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="card-head"><div class="card-icon ico-o">🔗</div><div><div class="card-title">Sklearn Pipeline</div></div></div>
+            <div class="card-desc">Chaining preprocessing steps and a model into a single, reproducible workflow with scikit-learn Pipelines.</div>
+            <div class="card-tags"><span class="tag">Preprocessing</span><span class="tag">Pipelines</span><span class="tag">Scikit-Learn</span></div>
         </a>
-
         <a href="./PCAandSVDorEigendecomposition/" class="card">
-            <div class="card-head">
-                <div class="card-icon ico-b">🔧</div>
-            </div>
-            <div class="card-title">PCA (SVD & Eigendecomposition)</div>
-            <div class="card-desc">Explaining Principal Components Analysis (PCA) by two Mathematical equivalent Approaches; Singular Value Decomposition (SVD) and Eigendecomposition of the standardized covariance matrix.</div>
-            <div class="card-tags">
-                <span class="tag a">PCA, Explained Variance</span>
-                <span class="tag">SVD, Low Rank Representation</span>
-                <span class="tag">Dimensionality Reduction, Features Extraction</span>
-            </div>
+            <div class="card-arrow"><svg viewBox="0 0 16 16" fill="none"><path d="M4 12L12 4M12 4H6M12 4v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="card-head"><div class="card-icon ico-g">📐</div><div><div class="card-lecture">ML_07</div><div class="card-title">PCA (SVD & Eigendecomposition)</div></div></div>
+            <div class="card-desc">Principal Components Analysis by two equivalent approaches: Singular Value Decomposition and Eigendecomposition of the standardized covariance matrix.</div>
+            <div class="card-tags"><span class="tag">PCA</span><span class="tag">SVD</span><span class="tag">Dim. Reduction</span><span class="tag">Feature Extraction</span></div>
         </a>
-
-        <a href="./smote/" class="card">
-            <div class="card-head">
-                <div class="card-icon ico-b">⚖️</div>
-            </div>
-            <div class="card-title">SMOTE & SMOTE-NC</div>
-            <div class="card-desc">Step-by-step walkthrough of synthetic oversampling for imbalanced datasets. See every distance calculation, k-NN selection, and synthetic sample generation live.</div>
-            <div class="card-tags">
-                <span class="tag a">Imbalanced Data</span>
-                <span class="tag">Oversampling</span>
-                <span class="tag">Chawla et al.</span>
-            </div>
-        </a>
-
-        
-        
-
     </div>
 
-    
-    <div class="cat-label"> </div>
+    <div class="section-head" style="margin-top:1.5rem">
+        <div class="section-icon si-o">⚖️</div>
+        <span class="section-label">Imbalanced Data</span>
+        <span class="section-count">1 tool</span>
+    </div>
     <div class="grid">
-
-        <a href="./AttentionAndTransformer/" class="card">
-            <div class="card-head">
-                <div class="card-icon ico-p">🤖</div>
-            </div>
-            <div class="card-title">Attention Is All You Need</div>
-            <div class="card-desc">Interactive guide to the Transformer architecture — self-attention, Q/K/V matrices, multi-head attention, positional encoding, masking, and the full encoder-decoder pipeline with step-by-step math.</div>
-            <div class="card-tags">
-                <span class="tag a">Vaswani et al. 2017</span>
-                <span class="tag">Self-Attention</span>
-                <span class="tag">Transformers</span>
-            </div>
-        </a>
-
-
-        <a href="./GPTDecoderSimulator/" class="card">
-            <div class="card-head">
-                <div class="card-icon ico-o">🔮</div>
-            </div>
-            <div class="card-title">GPT-Decoder Simulator</div>
-            <div class="card-desc">17 step-by-step stages of the forward pass: tokenization → embedding → positional encoding → Q/K/V projections → multi-head masked attention → concat + output projection → residual + LayerNorm → FFN → residual + LayerNorm → final LN → logits → softmax → prediction.</div>
-            <div class="card-tags">
-                <span class="tag a">NLP</span>
-                <span class="tag">GPT</span>
-                <span class="tag">Decoder</span>
-                <span class="tag">Simulator</span>
-            </div>
-        </a>
-
-
-
-        <a href="./RAGSystemSimulator/" class="card">
-            <div class="card-head">
-                <div class="card-icon ico-o">🔮</div>
-            </div>
-            <div class="card-title">RAG-System Simulator</div>
-            <div class="card-desc">Retrieval-Augmented Generation· Step-by-Step</div>
-            <div class="card-tags">
-                <span class="tag a">NLP</span>
-                <span class="tag">RAG</span>
-                <span class="tag">Embedding</span>
-                <span class="tag">Simulator</span>
-            </div>
-        </a>
-
-
-        
-        <a href="./LowRankAdaptationLLMS/" class="card">
-            <div class="card-head">
-                <div class="card-icon ico-o">🔮</div>
-            </div>
-            <div class="card-title">Low-Rank Adaptation (LoRA) LLMS</div>
-            <div class="card-desc">LoRA (Low-Rank Adaptation, Hu et al. 2021) is a parameter-efficient fine-tuning method that freezes a pre-trained model's weights and learns a small rank-r update on the side. </div>
-            <div class="card-tags">
-                <span class="tag a">NLP</span>
-                <span class="tag">LoRA</span>
-                <span class="tag">fine-Tuning</span>
-                <span class="tag">Simulator</span>
-            </div>
+        <a href="./smote/" class="card">
+            <div class="card-arrow"><svg viewBox="0 0 16 16" fill="none"><path d="M4 12L12 4M12 4H6M12 4v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="card-head"><div class="card-icon ico-o">🧬</div><div><div class="card-title">SMOTE & SMOTE-NC</div></div></div>
+            <div class="card-desc">Step-by-step walkthrough of synthetic oversampling. See every distance calculation, k-NN selection, and synthetic sample generation live.</div>
+            <div class="card-tags"><span class="tag">Oversampling</span><span class="tag">k-NN</span><span class="tag">Chawla et al.</span></div>
         </a>
     </div>
+
+    <div class="divider"><div class="divider-icon">🧠</div></div>
+
+    <div class="section-head">
+        <div class="section-icon si-p">🤖</div>
+        <span class="section-label">Deep Learning & NLP</span>
+        <span class="section-count">4 tools</span>
+    </div>
+    <div class="grid">
+        <a href="./AttentionAndTransformer/" class="card">
+            <div class="card-arrow"><svg viewBox="0 0 16 16" fill="none"><path d="M4 12L12 4M12 4H6M12 4v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="card-head"><div class="card-icon ico-p">🤖</div><div><div class="card-lecture">Vaswani et al. 2017</div><div class="card-title">Attention Is All You Need</div></div></div>
+            <div class="card-desc">Interactive guide to the Transformer architecture — self-attention, Q/K/V matrices, multi-head attention, positional encoding, masking, and the full encoder-decoder pipeline.</div>
+            <div class="card-tags"><span class="tag">Self-Attention</span><span class="tag">Transformers</span><span class="tag">Encoder-Decoder</span></div>
+        </a>
+        <a href="./GPTDecoderSimulator/" class="card">
+            <div class="card-arrow"><svg viewBox="0 0 16 16" fill="none"><path d="M4 12L12 4M12 4H6M12 4v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="card-head"><div class="card-icon ico-p">🔮</div><div><div class="card-title">GPT-Decoder Simulator</div></div></div>
+            <div class="card-desc">17 step-by-step stages of the forward pass: tokenization → embedding → positional encoding → Q/K/V → masked attention → FFN → logits → softmax → prediction.</div>
+            <div class="card-tags"><span class="tag">GPT</span><span class="tag">Decoder</span><span class="tag">Forward Pass</span></div>
+        </a>
+        <a href="./RAGSystemSimulator/" class="card">
+            <div class="card-arrow"><svg viewBox="0 0 16 16" fill="none"><path d="M4 12L12 4M12 4H6M12 4v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="card-head"><div class="card-icon ico-o">🔍</div><div><div class="card-title">RAG-System Simulator</div></div></div>
+            <div class="card-desc">Retrieval-Augmented Generation step by step — embedding, vector search, context injection, and generation pipeline.</div>
+            <div class="card-tags"><span class="tag">RAG</span><span class="tag">Embedding</span><span class="tag">Retrieval</span></div>
+        </a>
+        <a href="./LowRankAdaptationLLMS/" class="card">
+            <div class="card-arrow"><svg viewBox="0 0 16 16" fill="none"><path d="M4 12L12 4M12 4H6M12 4v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="card-head"><div class="card-icon ico-o">⚡</div><div><div class="card-lecture">Hu et al. 2021</div><div class="card-title">Low-Rank Adaptation (LoRA)</div></div></div>
+            <div class="card-desc">A parameter-efficient fine-tuning method that freezes pre-trained weights and learns a small rank-r update — dramatically reducing trainable parameters.</div>
+            <div class="card-tags"><span class="tag">LoRA</span><span class="tag">Fine-Tuning</span><span class="tag">Efficient</span></div>
+        </a>
+    </div>
+
+    <div class="divider"><div class="divider-icon">🎓</div></div>
+
+    <div class="tour-section">
+        <div class="section-head">
+            <div class="section-icon si-t">🗺️</div>
+            <span class="section-label">Apps with Guided Tours</span>
+            <span class="section-count">2 tours</span>
+        </div>
+        <div class="tour-langs">
+            <div class="tour-lang-group">
+                <div class="lang-pill en">🇬🇧 English</div>
+                <a href="./PCAandSVDorEigendecomposition/pca-tour.html" class="tour-card">
+                    <div class="tour-card-icon">🎓</div>
+                    <div class="tour-card-body">
+                        <div class="tour-card-title">PCA Interactive — Guided Tour</div>
+                        <div class="tour-card-desc">10-step walkthrough of projection, covariance, eigendecomposition, scree plots, SVD, and real-data PC regression — with "Try this" prompts at every step.</div>
+                        <div class="tour-card-tags"><span class="tag t">Guided Tour</span><span class="tag">PCA</span><span class="tag">SVD</span><span class="tag">9 Tabs</span></div>
+                    </div>
+                    <div class="tour-card-arrow">→</div>
+                </a>
+            </div>
+            <div class="tour-lang-group">
+                <div class="lang-pill de">🇩🇪 Deutsch</div>
+                <a href="./PCAandSVDorEigendecomposition/pca-tour-de.html" class="tour-card">
+                    <div class="tour-card-icon">🎓</div>
+                    <div class="tour-card-body">
+                        <div class="tour-card-title">PCA Interaktiv — Geführte Tour</div>
+                        <div class="tour-card-desc">10-Schritte-Tour: Projektion, Kovarianz, Eigenzerlegung, Scree-Plots, SVD und reale PC-Regression. App komplett auf Deutsch.</div>
+                        <div class="tour-card-tags"><span class="tag t">Geführte Tour</span><span class="tag">PCA</span><span class="tag">SVD</span><span class="tag">9 Tabs</span></div>
+                    </div>
+                    <div class="tour-card-arrow">→</div>
+                </a>
+            </div>
+        </div>
+    </div>
+
     <footer>
         <p>Built for the ML course — <a href="https://github.com/abka0002/Machine-Learning-Explained" target="_blank" rel="noopener">View on GitHub</a></p>
     </footer>
-
 </div>
 </body>
 </html>
