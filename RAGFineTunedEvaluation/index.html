@@ -1,0 +1,2126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide: Evaluating RAG Systems and Fine-Tuned LLMs</title>
+
+    <!-- Fonts: Source Serif (academic body) + IBM Plex Sans (UI) + JetBrains Mono (code) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+
+    <!-- KaTeX for math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+            onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\\\(',right:'\\\\)',display:false},{left:'\\\\[',right:'\\\\]',display:true}],throwOnError:false});"></script>
+
+    <style>
+        :root {
+            /* Light theme — academic editorial */
+            --primary:        #0f2a4a;   /* Oxford blue */
+            --primary-soft:   #1f3f6b;
+            --secondary:      #2c5282;
+            --accent:         #8b1a1a;   /* muted crimson (academic tradition) */
+            --accent-soft:    #b03939;
+            --success:        #1f5235;
+            --warning:        #9a6b1c;
+            --info:           #2563a8;
+
+            --text:           #1a202c;
+            --text-soft:      #4a5568;
+            --text-muted:     #718096;
+
+            --bg:             #f8f5ef;   /* warm cream paper */
+            --bg-alt:         #f1ece2;
+            --surface:        #ffffff;
+            --surface-alt:    #fbf8f1;
+            --border:         #d9d2c4;
+            --border-soft:    #e8e2d4;
+
+            --code-bg:        #1a202c;
+            --code-text:      #e2e8f0;
+
+            --shadow-sm: 0 1px 3px rgba(15,42,74,0.08);
+            --shadow:    0 4px 16px rgba(15,42,74,0.10);
+            --shadow-lg: 0 10px 32px rgba(15,42,74,0.14);
+
+            --radius-sm: 6px;
+            --radius:    10px;
+            --radius-lg: 16px;
+
+            --font-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+            --font-sans:  'IBM Plex Sans', -apple-system, system-ui, sans-serif;
+            --font-mono:  'JetBrains Mono', Consolas, Menlo, monospace;
+        }
+
+        [data-theme="dark"] {
+            --primary:        #6ea8e5;
+            --primary-soft:   #4a8acb;
+            --secondary:      #82b0e0;
+            --accent:         #e07b7b;
+            --accent-soft:    #c46060;
+            --success:        #6ec48a;
+            --warning:        #e0b566;
+            --info:           #7eb8e8;
+
+            --text:           #e6e1d5;
+            --text-soft:      #b9b3a4;
+            --text-muted:     #8a8475;
+
+            --bg:             #14171c;
+            --bg-alt:         #1a1e25;
+            --surface:        #1e242c;
+            --surface-alt:    #232932;
+            --border:         #353c47;
+            --border-soft:    #2a313a;
+
+            --code-bg:        #0d1117;
+            --code-text:      #e2e8f0;
+
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow:    0 4px 16px rgba(0,0,0,0.35);
+            --shadow-lg: 0 10px 32px rgba(0,0,0,0.5);
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        html { scroll-behavior:smooth; scroll-padding-top:80px; }
+
+        body {
+            font-family: var(--font-serif);
+            font-size: 17px;
+            line-height: 1.7;
+            color: var(--text);
+            background: var(--bg);
+            transition: background 0.25s ease, color 0.25s ease;
+            -webkit-font-smoothing: antialiased;
+            font-feature-settings: "kern" 1, "liga" 1, "onum" 1;
+        }
+
+        /* ========== READING PROGRESS BAR ========== */
+        #progress-bar {
+            position: fixed; top:0; left:0; height:3px; width:0%;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--primary) 100%);
+            z-index: 1000; transition: width 0.1s linear;
+        }
+
+        /* ========== TOP BAR ========== */
+        .topbar {
+            position: sticky; top:0; z-index:100;
+            background: color-mix(in srgb, var(--bg) 92%, transparent);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-soft);
+        }
+        .topbar-inner {
+            max-width: 1280px; margin:0 auto; padding: 14px 28px;
+            display:flex; align-items:center; justify-content:space-between; gap:20px;
+        }
+        .brand {
+            font-family: var(--font-sans); font-weight: 600;
+            color: var(--primary); font-size: 0.92em; letter-spacing: 0.02em;
+            display:flex; align-items:center; gap:10px;
+        }
+        .brand-mark {
+            width: 28px; height: 28px; border-radius: 6px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 140%);
+            display:grid; place-items:center; color:white; font-weight:700; font-size:0.85em;
+            box-shadow: var(--shadow-sm);
+        }
+        .topbar-actions { display:flex; gap:8px; align-items:center; font-family: var(--font-sans); font-size: 0.85em; }
+        .topbar-actions button {
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text-soft); padding: 7px 14px; border-radius: var(--radius-sm);
+            cursor: pointer; font-family: var(--font-sans); font-size: 0.92em;
+            transition: all 0.15s ease;
+        }
+        .topbar-actions button:hover { background: var(--surface); color: var(--primary); border-color: var(--primary); }
+
+        /* ========== LAYOUT ========== */
+        .layout {
+            max-width: 1280px; margin: 0 auto; padding: 30px 28px 80px;
+            display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 48px;
+        }
+
+        /* ========== SIDEBAR ========== */
+        aside.sidebar {
+            position: sticky; top: 80px; align-self: start;
+            max-height: calc(100vh - 100px); overflow-y: auto;
+            font-family: var(--font-sans);
+        }
+        aside.sidebar::-webkit-scrollbar { width: 4px; }
+        aside.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        .toc-label {
+            font-size: 0.72em; font-weight: 600; letter-spacing: 0.12em;
+            text-transform: uppercase; color: var(--text-muted);
+            padding-bottom: 12px; margin-bottom: 14px;
+            border-bottom: 1px solid var(--border-soft);
+        }
+        .toc-list { list-style: none; }
+        .toc-list li { margin-bottom: 2px; }
+        .toc-list a {
+            display: block; padding: 7px 12px; border-radius: var(--radius-sm);
+            color: var(--text-soft); text-decoration: none; font-size: 0.88em;
+            border-left: 2px solid transparent;
+            transition: all 0.15s ease;
+        }
+        .toc-list a:hover { color: var(--primary); background: var(--surface); }
+        .toc-list a.active {
+            color: var(--accent); background: var(--surface);
+            border-left-color: var(--accent); font-weight: 500;
+        }
+        .toc-num { display:inline-block; width:22px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+        .toc-list a.active .toc-num { color: var(--accent); }
+
+        /* ========== HEADER ========== */
+        header.hero {
+            background: var(--surface);
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius-lg);
+            padding: 56px 56px 48px;
+            margin-bottom: 48px;
+            position: relative; overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        header.hero::before {
+            content: ""; position: absolute; top:0; right:0;
+            width: 320px; height: 320px;
+            background: radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        header.hero::after {
+            content: ""; position: absolute; bottom:0; left:0;
+            width: 280px; height: 280px;
+            background: radial-gradient(circle at 30% 70%, color-mix(in srgb, var(--primary) 10%, transparent) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .eyebrow {
+            font-family: var(--font-sans); font-size: 0.78em; font-weight: 600;
+            letter-spacing: 0.18em; text-transform: uppercase;
+            color: var(--accent); margin-bottom: 18px;
+            display: inline-flex; align-items:center; gap: 10px;
+        }
+        .eyebrow::before {
+            content:""; width: 28px; height:1px; background: var(--accent);
+        }
+        header.hero h1 {
+            font-family: var(--font-serif);
+            font-size: clamp(2em, 4vw, 2.8em);
+            font-weight: 600; line-height: 1.15;
+            color: var(--primary); margin-bottom: 18px;
+            letter-spacing: -0.01em;
+            position: relative;
+        }
+        header.hero .subtitle {
+            font-size: 1.18em; color: var(--text-soft);
+            font-style: italic; max-width: 680px;
+            position: relative;
+        }
+        .hero-meta {
+            margin-top: 32px; padding-top: 24px;
+            border-top: 1px solid var(--border-soft);
+            display: flex; flex-wrap:wrap; gap: 32px;
+            font-family: var(--font-sans); font-size: 0.86em;
+            color: var(--text-muted);
+            position: relative;
+        }
+        .hero-meta div strong {
+            color: var(--text); font-weight: 600; display:block;
+            font-size: 0.92em; margin-bottom: 2px;
+        }
+
+        /* ========== SECTIONS ========== */
+        section.chapter {
+            background: var(--surface);
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius-lg);
+            padding: 48px 56px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-sm);
+            scroll-margin-top: 80px;
+        }
+        .chapter-header {
+            display:flex; align-items:flex-start; gap: 20px;
+            padding-bottom: 24px; margin-bottom: 32px;
+            border-bottom: 2px solid var(--accent);
+        }
+        .chapter-num {
+            font-family: var(--font-sans); font-size: 0.72em; font-weight: 600;
+            letter-spacing: 0.18em; text-transform: uppercase;
+            color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 8%, transparent);
+            padding: 4px 12px; border-radius: 999px;
+            white-space: nowrap; margin-top: 6px;
+        }
+        h2.chapter-title {
+            font-family: var(--font-serif); font-size: 1.85em; font-weight: 600;
+            color: var(--primary); line-height: 1.2; letter-spacing: -0.01em;
+        }
+
+        h3 {
+            font-family: var(--font-serif); font-size: 1.35em; font-weight: 600;
+            color: var(--primary); margin: 36px 0 16px;
+            letter-spacing: -0.005em;
+        }
+        h3 .h3-num {
+            color: var(--accent); font-family: var(--font-sans);
+            font-size: 0.85em; font-weight: 600; margin-right: 10px;
+            font-variant-numeric: tabular-nums;
+        }
+        h4 {
+            font-family: var(--font-sans); font-size: 1.05em; font-weight: 600;
+            color: var(--primary-soft); margin: 28px 0 12px;
+            letter-spacing: 0.005em;
+        }
+        p { margin-bottom: 16px; color: var(--text); }
+        ul, ol { margin: 14px 0 18px 24px; }
+        li { margin-bottom: 6px; }
+
+        a { color: var(--secondary); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.15s; }
+        a:hover { border-bottom-color: var(--secondary); }
+
+        code, .mono { font-family: var(--font-mono); font-size: 0.9em; }
+        p code, li code {
+            background: var(--bg-alt); padding: 2px 7px; border-radius: 4px;
+            color: var(--accent); font-size: 0.88em;
+            border: 1px solid var(--border-soft);
+        }
+
+        /* ========== CALLOUT BOXES ========== */
+        .example-box {
+            background: var(--surface-alt);
+            border-left: 4px solid var(--secondary);
+            border-radius: 0 var(--radius) var(--radius) 0;
+            padding: 24px 28px; margin: 24px 0;
+        }
+        .example-box.worked { border-left-color: var(--success); }
+        .example-box h4 { margin-top: 0; font-size: 0.95em; color: var(--secondary); display:flex; align-items:center; gap:8px; }
+        .example-box.worked h4 { color: var(--success); }
+
+        .reference {
+            background: var(--bg-alt);
+            border-left: 3px solid var(--info);
+            padding: 14px 20px; margin: 16px 0;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            font-size: 0.92em; color: var(--text-soft);
+            font-family: var(--font-sans);
+        }
+        .reference strong { color: var(--text); }
+
+        .tip, .warning, .insight {
+            padding: 20px 24px; margin: 24px 0;
+            border-radius: var(--radius); border-left: 4px solid;
+            font-family: var(--font-sans); font-size: 0.95em;
+        }
+        .tip { background: color-mix(in srgb, var(--warning) 10%, var(--surface)); border-left-color: var(--warning); }
+        .warning { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); border-left-color: var(--accent); }
+        .insight { background: color-mix(in srgb, var(--info) 8%, var(--surface)); border-left-color: var(--info); }
+        .tip h4, .warning h4, .insight h4 { margin-top: 0; margin-bottom: 8px; font-size: 0.95em; }
+        .tip h4 { color: var(--warning); }
+        .warning h4 { color: var(--accent); }
+        .insight h4 { color: var(--info); }
+
+        /* ========== FORMULA BOX ========== */
+        .formula-box {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-soft) 100%);
+            color: white;
+            border-radius: var(--radius);
+            padding: 24px 28px; margin: 22px 0;
+            box-shadow: var(--shadow);
+            position: relative; overflow:hidden;
+        }
+        .formula-box::before {
+            content:""; position:absolute; top:0; right:0; width:120px; height:100%;
+            background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 30%, transparent));
+            pointer-events:none;
+        }
+        .formula-name {
+            font-family: var(--font-sans); font-size: 0.72em; font-weight: 600;
+            letter-spacing: 0.18em; text-transform: uppercase;
+            opacity: 0.7; margin-bottom: 12px;
+        }
+        .formula-content {
+            font-size: 1.15em; text-align:center; padding: 8px 0;
+            color: white;
+        }
+        .formula-content .katex { color: white !important; font-size: 1.1em; }
+        .formula-content .katex .mathnormal,
+        .formula-content .katex .mord,
+        .formula-content .katex .mbin,
+        .formula-content .katex .mrel { color: white !important; }
+
+        /* ========== CALCULATION STEPS ========== */
+        .calc-steps {
+            background: var(--bg-alt);
+            border-radius: var(--radius);
+            padding: 22px 26px; margin: 20px 0;
+            border: 1px solid var(--border-soft);
+        }
+        .calc-step {
+            display:flex; align-items:flex-start; gap: 14px;
+            padding-bottom: 12px; margin-bottom: 12px;
+            border-bottom: 1px dashed var(--border);
+        }
+        .calc-step:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+        .step-number {
+            background: var(--secondary); color: white;
+            min-width: 26px; height: 26px; border-radius: 50%;
+            display:grid; place-items:center;
+            font-family: var(--font-sans); font-size: 0.78em; font-weight: 600;
+            margin-top: 2px;
+        }
+        .step-content { flex:1; line-height: 1.6; }
+
+        .result {
+            background: linear-gradient(135deg, var(--success) 0%, color-mix(in srgb, var(--success) 70%, black) 100%);
+            color: white; padding: 14px 24px;
+            border-radius: var(--radius); margin: 18px 0;
+            display:flex; align-items:center; justify-content:space-between;
+            font-family: var(--font-sans); box-shadow: var(--shadow-sm);
+        }
+        .result .label { font-size: 0.92em; opacity: 0.9; }
+        .result .value { font-size: 1.55em; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+        /* ========== TABLES ========== */
+        .data-table, .summary-table {
+            width: 100%; border-collapse: collapse; margin: 22px 0;
+            font-family: var(--font-sans); font-size: 0.92em;
+            background: var(--surface);
+            border: 1px solid var(--border-soft); border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .data-table th, .summary-table th {
+            background: var(--primary); color: white;
+            padding: 13px 16px; text-align: left;
+            font-weight: 600; font-size: 0.88em;
+            letter-spacing: 0.02em;
+        }
+        .data-table td, .summary-table td {
+            padding: 11px 16px;
+            border-bottom: 1px solid var(--border-soft);
+            color: var(--text);
+        }
+        .data-table tr:last-child td, .summary-table tr:last-child td { border-bottom: none; }
+        .data-table tr:nth-child(even) td, .summary-table tr:nth-child(even) td { background: var(--surface-alt); }
+
+        .relevant { color: var(--success); font-weight: 600; }
+        .not-relevant { color: var(--accent); }
+
+        /* ========== CODE BLOCKS ========== */
+        pre {
+            background: var(--code-bg); color: var(--code-text);
+            padding: 22px 26px; border-radius: var(--radius);
+            overflow-x: auto; margin: 20px 0;
+            font-family: var(--font-mono); font-size: 0.86em;
+            line-height: 1.65;
+            box-shadow: var(--shadow-sm);
+        }
+        pre code { color: var(--code-text); background: transparent; padding: 0; border: none; }
+
+        /* ========== COMPARISON CARDS ========== */
+        .comparison-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
+            margin: 24px 0;
+        }
+        .comparison-card {
+            background: var(--surface-alt);
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius);
+            padding: 22px 24px;
+            transition: all 0.2s ease;
+        }
+        .comparison-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow); transform: translateY(-2px);
+        }
+        .comparison-card h4 { margin-top: 0; color: var(--primary); }
+        .comparison-card ul { margin: 8px 0 0 18px; font-family: var(--font-sans); font-size: 0.92em; }
+
+        /* ========== FIGURES ========== */
+        .figure { margin: 32px 0; }
+        .figure-container {
+            background: var(--surface);
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        figcaption {
+            text-align: center; margin-top: 14px;
+            font-size: 0.9em; color: var(--text-muted);
+            font-family: var(--font-sans); font-style: italic;
+        }
+        figcaption strong { color: var(--primary); font-style: normal; font-weight: 600; }
+
+        /* ========== INTERACTIVE COMPONENTS ========== */
+        .interactive-panel {
+            background: linear-gradient(135deg, var(--surface) 0%, var(--surface-alt) 100%);
+            border: 2px solid var(--primary);
+            border-radius: var(--radius-lg);
+            padding: 28px 32px;
+            margin: 28px 0;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+        .interactive-panel::before {
+            content: "INTERACTIVE";
+            position: absolute; top: -10px; left: 24px;
+            background: var(--accent); color: white;
+            font-family: var(--font-sans); font-size: 0.68em; font-weight: 600;
+            letter-spacing: 0.15em; padding: 3px 10px; border-radius: 4px;
+        }
+        .interactive-panel h4 {
+            margin-top: 0; color: var(--primary); font-size: 1.1em;
+            display:flex; align-items:center; gap:10px;
+        }
+        .interactive-panel .hint {
+            font-family: var(--font-sans); font-size: 0.85em;
+            color: var(--text-muted); margin-bottom: 18px;
+        }
+
+        /* Interactive grid for relevance toggling */
+        .relevance-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 8px; margin: 16px 0;
+        }
+        .relevance-item {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 8px; cursor: pointer;
+            text-align: center; font-family: var(--font-sans);
+            font-size: 0.82em; user-select: none;
+            transition: all 0.15s ease;
+            display:flex; flex-direction:column; gap: 4px; align-items:center;
+        }
+        .relevance-item:hover { border-color: var(--primary); transform: translateY(-1px); }
+        .relevance-item.selected {
+            background: color-mix(in srgb, var(--success) 15%, var(--surface));
+            border-color: var(--success); color: var(--success);
+        }
+        .relevance-item .rank {
+            font-weight: 700; font-size: 1.1em; color: var(--primary);
+        }
+        .relevance-item.selected .rank { color: var(--success); }
+        .relevance-item .label { font-size: 0.78em; color: var(--text-muted); }
+
+        /* Slider input */
+        .slider-row {
+            display: grid; grid-template-columns: 220px 1fr 80px;
+            align-items: center; gap: 16px; margin: 12px 0;
+            font-family: var(--font-sans); font-size: 0.92em;
+        }
+        .slider-row label { color: var(--text-soft); font-weight: 500; }
+        .slider-row input[type=range] {
+            -webkit-appearance: none; appearance: none;
+            height: 6px; border-radius: 3px;
+            background: var(--border);
+            outline: none;
+        }
+        .slider-row input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: var(--primary); cursor: pointer;
+            border: 2px solid var(--surface); box-shadow: var(--shadow-sm);
+        }
+        .slider-row input[type=range]::-moz-range-thumb {
+            width: 18px; height: 18px; border-radius: 50%;
+            background: var(--primary); cursor: pointer; border: 2px solid var(--surface);
+        }
+        .slider-value {
+            background: var(--primary); color: white;
+            padding: 4px 10px; border-radius: 4px;
+            font-variant-numeric: tabular-nums; font-weight: 600;
+            text-align: center; font-size: 0.9em;
+        }
+
+        /* Live output display */
+        .live-output {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px; margin-top: 20px;
+            padding-top: 20px; border-top: 1px dashed var(--border);
+        }
+        .live-metric {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            font-family: var(--font-sans);
+        }
+        .live-metric .lm-name {
+            font-size: 0.72em; letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--text-muted); font-weight: 600;
+        }
+        .live-metric .lm-value {
+            font-size: 1.7em; font-weight: 700; color: var(--primary);
+            font-variant-numeric: tabular-nums; margin-top: 4px;
+            font-family: var(--font-serif);
+        }
+
+        /* ========== QUIZ ========== */
+        .quiz-question {
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px 28px; margin: 20px 0;
+        }
+        .quiz-question .q-text {
+            font-weight: 600; color: var(--primary); margin-bottom: 14px;
+            display:flex; align-items:flex-start; gap:10px;
+        }
+        .quiz-question .q-num {
+            background: var(--accent); color: white;
+            min-width: 26px; height: 26px; border-radius: 50%;
+            display:grid; place-items:center;
+            font-family: var(--font-sans); font-size: 0.78em; font-weight: 600;
+            flex-shrink: 0;
+        }
+        .quiz-options { display:flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+        .quiz-option {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px; cursor: pointer;
+            font-family: var(--font-sans); font-size: 0.92em;
+            transition: all 0.15s ease;
+            display:flex; align-items:center; gap: 12px;
+        }
+        .quiz-option:hover { border-color: var(--primary); background: var(--bg-alt); }
+        .quiz-option.correct { background: color-mix(in srgb, var(--success) 12%, var(--surface)); border-color: var(--success); color: var(--success); font-weight: 500; }
+        .quiz-option.incorrect { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border-color: var(--accent); color: var(--accent); }
+        .quiz-option .opt-marker {
+            width: 22px; height: 22px; border-radius: 50%;
+            border: 2px solid var(--border);
+            display:grid; place-items:center; font-size: 0.78em; font-weight: 700;
+            flex-shrink: 0;
+        }
+        .quiz-option.correct .opt-marker { border-color: var(--success); background: var(--success); color: white; }
+        .quiz-option.incorrect .opt-marker { border-color: var(--accent); background: var(--accent); color: white; }
+        .quiz-feedback {
+            margin-top: 12px; padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-sans); font-size: 0.9em;
+            display: none;
+        }
+        .quiz-feedback.show { display: block; }
+        .quiz-feedback.correct {
+            background: color-mix(in srgb, var(--success) 10%, var(--surface));
+            border-left: 3px solid var(--success); color: var(--text);
+        }
+        .quiz-feedback.incorrect {
+            background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+            border-left: 3px solid var(--accent); color: var(--text);
+        }
+
+        /* ========== DETAILS / EXPANDABLE ========== */
+        details {
+            margin: 16px 0; border: 1px solid var(--border-soft);
+            border-radius: var(--radius-sm); padding: 12px 18px;
+            background: var(--surface);
+        }
+        details summary {
+            cursor: pointer; color: var(--secondary);
+            font-family: var(--font-sans); font-weight: 600; font-size: 0.94em;
+            user-select: none; outline: none;
+        }
+        details summary:hover { color: var(--primary); }
+        details[open] summary { margin-bottom: 12px; }
+        details > div, details > p { color: var(--text-soft); font-size: 0.95em; line-height: 1.65; }
+
+        /* ========== REFERENCES SECTION ========== */
+        .references-section {
+            background: var(--surface-alt);
+            border-radius: var(--radius);
+            padding: 28px 32px; margin-top: 32px;
+            font-family: var(--font-sans);
+        }
+        .references-section h3 { margin-top: 0; color: var(--primary); font-family: var(--font-serif); }
+        .references-section ol { margin: 16px 0 0 22px; }
+        .references-section li {
+            margin-bottom: 14px; font-size: 0.9em; color: var(--text-soft);
+            padding-left: 6px;
+        }
+        .references-section li strong { color: var(--text); }
+        .references-section li em { color: var(--text-soft); }
+
+        /* ========== FOOTER ========== */
+        footer.page-footer {
+            text-align: center; margin-top: 60px; padding: 32px 0;
+            border-top: 1px solid var(--border-soft);
+            color: var(--text-muted); font-family: var(--font-sans); font-size: 0.88em;
+        }
+        footer.page-footer .signature {
+            font-family: var(--font-serif); font-style: italic;
+            color: var(--text-soft); margin-top: 8px;
+        }
+
+        /* ========== ANIMATIONS ========== */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeInUp 0.5s ease both; }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 1024px) {
+            .layout { grid-template-columns: 1fr; padding: 24px 20px 60px; }
+            aside.sidebar { position: static; max-height: none; margin-bottom: 24px;
+                background: var(--surface); border: 1px solid var(--border-soft);
+                border-radius: var(--radius); padding: 18px 22px; box-shadow: var(--shadow-sm);
+            }
+            section.chapter { padding: 32px 28px; }
+            header.hero { padding: 36px 28px; }
+        }
+        @media (max-width: 640px) {
+            .comparison-grid { grid-template-columns: 1fr; }
+            .slider-row { grid-template-columns: 1fr; }
+            .topbar-inner { padding: 12px 16px; }
+            .brand span:not(.brand-mark) { display:none; }
+            header.hero h1 { font-size: 1.7em; }
+            .data-table, .summary-table { font-size: 0.82em; }
+            .data-table td, .summary-table td { padding: 8px 10px; }
+        }
+
+        @media print {
+            .topbar, aside.sidebar, .interactive-panel::before { display: none; }
+            .layout { grid-template-columns: 1fr; }
+            section.chapter { box-shadow: none; page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<!-- ============== TOP BAR ============== -->
+<div class="topbar">
+    <div class="topbar-inner">
+        <div class="brand">
+            <span class="brand-mark"></span>
+            <span>RAG &amp; Fine-Tuned LLM Evaluation Guide</span>
+        </div>
+        <div class="topbar-actions">
+            <button id="theme-toggle" title="Toggle light/dark" aria-label="Toggle theme">🌙 Dark</button>
+            <button onclick="window.print()" title="Print / save as PDF">🖨️ Print</button>
+        </div>
+    </div>
+</div>
+
+<div class="layout">
+
+    <!-- ============== SIDEBAR TOC ============== -->
+    <aside class="sidebar">
+        <div class="toc-label">Contents</div>
+        <ul class="toc-list">
+            <li><a href="#part1"><span class="toc-num">01</span>Introduction &amp; Foundations</a></li>
+            <li><a href="#part2"><span class="toc-num">02</span>Retrieval Metrics</a></li>
+            <li><a href="#part3"><span class="toc-num">03</span>RAGAS Framework</a></li>
+            <li><a href="#part4"><span class="toc-num">04</span>Fine-Tuning Metrics</a></li>
+            <li><a href="#part5"><span class="toc-num">05</span>Statistical Evaluation</a></li>
+            <li><a href="#part6"><span class="toc-num">06</span>Interactive Comparison</a></li>
+            <li><a href="#part7"><span class="toc-num">07</span>Decision Guide</a></li>
+            <li><a href="#part8"><span class="toc-num">08</span>Python Implementation</a></li>
+            <li><a href="#part9"><span class="toc-num">09</span>Self-Test (Quiz)</a></li>
+            <li><a href="#part10"><span class="toc-num">10</span>Exercises</a></li>
+            <li><a href="#part11"><span class="toc-num">11</span>References</a></li>
+        </ul>
+    </aside>
+
+    <main>
+        <!-- ============== HERO ============== -->
+        <header class="hero animate-in">
+            
+            <h1>Evaluating Retrieval-Augmented Generation Systems<br>and Fine-Tuned Large Language Models</h1>
+            <p class="subtitle">An introduction with examples, mathematical derivation, and discussion of common evaluation metrics.</p>
+            <div class="hero-meta">
+                
+                <div><strong>Edition</strong>Version 1.0</div>
+                
+                <div><strong>Last updated</strong>April 2026</div>
+            </div>
+        </header>
+
+        <!-- ============== 1 ============== -->
+        <section id="part1" class="chapter">
+            <div class="chapter-header">
+                <span class="chapter-num">01</span>
+                <h2 class="chapter-title">Introduction &amp; Foundations</h2>
+            </div>
+
+            <h3><span class="h3-num">1.1</span>What is Retrieval-Augmented Generation?</h3>
+            <p>Retrieval-Augmented Generation (RAG) denotes an architectural pattern that extends the static knowledge base of a Large Language Model (LLM) with dynamic access to external document collections. Formally, the process is described as a three-stage pipeline:</p>
+
+            <div class="formula-box">
+                <div class="formula-name">RAG Pipeline (formal definition)</div>
+                <div class="formula-content">
+                    $$\hat{y} = \mathcal{G}\bigl(q,\; \mathcal{R}(q;\, \mathcal{D})\bigr) \quad\text{with}\quad \mathcal{R}(q;\mathcal{D}) = \operatorname*{argtop\text{-}k}_{d \in \mathcal{D}} \;\operatorname{sim}(q, d)$$
+                </div>
+            </div>
+
+            <p>Here $q$ denotes the query, $\mathcal{D}$ the document collection, $\mathcal{R}$ the retriever (e.g., a dense bi-encoder with cosine similarity), and $\mathcal{G}$ the generator (the LLM). The composition $\mathcal{G} \circ \mathcal{R}$ unifies parametric knowledge (in the model weights) with non-parametric knowledge (in the index) — a concept discussed in the literature as <em>hybrid memory</em> (Lewis et al., 2020).</p>
+
+            <div class="reference">
+                📖 <strong>Scientific basis:</strong> Lewis et al. (2020) introduced RAG as an architecture. Es et al. (2024) provided <em>RAGAS</em>, today's most-cited method for reference-free evaluation. <a href="https://aclanthology.org/2024.eacl-demo.16/">[EACL 2024]</a>
+            </div>
+
+            <div class="example-box">
+                <h4>🔧 Application example: RAG in manufacturing engineering</h4>
+                <p><strong>Query:</strong> "How do I optimize cutting speed for CNC milling of aluminum?"</p>
+                <p><strong>Retrieved documents (top-2):</strong></p>
+                <ul>
+                    <li>$d_1$: "For AlMg3 we recommend cutting speeds of 200–300 m/min..."</li>
+                    <li>$d_2$: "The feed rate for aluminum should be 0.1–0.3 mm/tooth..."</li>
+                </ul>
+                <p><strong>Generated answer:</strong> "For CNC milling of aluminum I recommend 200–300 m/min with HSS cutters and a feed rate of 0.1–0.3 mm/tooth."</p>
+                <p style="font-size:0.92em;color:var(--text-muted);margin-top:10px;">Note: answer quality depends both on retrieval quality and on generator faithfulness. Both components require <em>separate</em> metrics.</p>
+            </div>
+
+            <h3><span class="h3-num">1.2</span>RAG vs. Fine-Tuning: A conceptual comparison</h3>
+            <div class="comparison-grid">
+                <div class="comparison-card">
+                    <h4>🔄 RAG approach</h4>
+                    <ul>
+                        <li>Knowledge externally indexed (non-parametric)</li>
+                        <li>Updates possible without retraining</li>
+                        <li>Source citation and traceability</li>
+                        <li>Higher inference latency (retrieval step)</li>
+                        <li>Suited to fact-intensive domains</li>
+                    </ul>
+                </div>
+                <div class="comparison-card">
+                    <h4>🎯 Fine-tuning approach</h4>
+                    <ul>
+                        <li>Knowledge in model weights (parametric)</li>
+                        <li>Updates require retraining</li>
+                        <li>No intrinsic source attribution</li>
+                        <li>Lower inference latency</li>
+                        <li>Suited to style, format, and domain adaptation</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="insight">
+                <h4>💡 Design decision in practice</h4>
+                <p>The two approaches are complementary, not competing. Empirical studies (Ovadia et al., 2024) show that RAG is superior for fact-based tasks, while fine-tuning is preferable for stylistic adaptation and latency-critical applications. The hybrid approach — fine-tuning on domain style <em>plus</em> RAG for current facts — is state-of-the-art in production systems.</p>
+            </div>
+        </section>
+
+        <!-- ============== 2 ============== -->
+        <section id="part2" class="chapter">
+            <div class="chapter-header">
+                <span class="chapter-num">02</span>
+                <h2 class="chapter-title">Retrieval Metrics</h2>
+            </div>
+
+            <p>Retrieval metrics evaluate the quality of the component $\mathcal{R}$. They differ in whether they (a) consider pure <em>set relations</em> (precision, recall), (b) account for <em>position</em> (MRR), or (c) incorporate <em>graded relevance</em> (NDCG).</p>
+
+            <h3><span class="h3-num">2.1</span>Precision@K and Recall@K</h3>
+
+            <div class="formula-box">
+                <div class="formula-name">Precision &amp; Recall at cutoff K</div>
+                <div class="formula-content">
+                    $$\text{Precision@}K = \frac{|\mathcal{R}_K \cap \mathcal{V}|}{K}, \qquad \text{Recall@}K = \frac{|\mathcal{R}_K \cap \mathcal{V}|}{|\mathcal{V}|}$$
+                </div>
+            </div>
+
+            <p>Here $\mathcal{R}_K$ is the set of top-$K$ retrieved documents and $\mathcal{V}$ is the set of all relevant documents in the corpus (ground truth).</p>
+
+            <details>
+                <summary>📐 Statistical interpretation (click to expand)</summary>
+                <div>
+                    <p>Precision@K is the empirical estimator of the conditional probability $P(\text{relevant} \mid \text{retrieved in top-}K)$. Recall@K estimates $P(\text{retrieved in top-}K \mid \text{relevant})$. Both are asymmetric: a system with high precision but low recall is "precise but incomplete"; conversely, it returns many hits but with a high noise fraction.</p>
+                    <p>The F1 score $F_1 = 2 \cdot \frac{P \cdot R}{P+R}$ forms the harmonic mean and is more pessimistic than the arithmetic mean (it penalizes imbalance more strongly).</p>
+                </div>
+            </details>
+
+            <div class="example-box worked">
+                <h4>✏️ Worked example: Precision@5 — Thiele-Small parameters</h4>
+                <p><strong>Query:</strong> "How do I determine the Thiele-Small parameters of a loudspeaker?"</p>
+                <table class="data-table">
+                    <thead><tr><th>Rank</th><th>Document</th><th>Relevant?</th></tr></thead>
+                    <tbody>
+                        <tr><td>1</td><td>"Thiele-Small measurement via impedance analysis"</td><td class="relevant">✓</td></tr>
+                        <tr><td>2</td><td>"Enclosure design for bass loudspeakers"</td><td class="not-relevant">✗</td></tr>
+                        <tr><td>3</td><td>"Electromechanical modeling"</td><td class="relevant">✓</td></tr>
+                        <tr><td>4</td><td>"Crossover design"</td><td class="not-relevant">✗</td></tr>
+                        <tr><td>5</td><td>"Determining $Q_{ts}$, $V_{as}$ and $f_s$"</td><td class="relevant">✓</td></tr>
+                    </tbody>
+                </table>
+                <div class="calc-steps">
+                    <div class="calc-step"><span class="step-number">1</span><div class="step-content">Relevant in top-5: <code>3</code> (ranks 1, 3, 5)</div></div>
+                    <div class="calc-step"><span class="step-number">2</span><div class="step-content">$\text{Precision@}5 = \dfrac{3}{5} = 0.60$</div></div>
+                </div>
+                <div class="result"><span class="label">Precision@5 =</span><span class="value">0.60</span></div>
+            </div>
+
+            <!-- INTERACTIVE: Precision/Recall Calculator -->
+            <div class="interactive-panel">
+                <h4>🎮 Interactive calculator: Precision &amp; Recall</h4>
+                <p class="hint">Click on the ranks to mark them as "relevant". Metrics are computed live.</p>
+                <div id="precision-grid" class="relevance-grid"></div>
+                <div class="slider-row">
+                    <label for="totalRelevant">Total relevant in corpus $|\mathcal{V}|$:</label>
+                    <input type="range" id="totalRelevant" min="3" max="20" value="8" step="1">
+                    <span class="slider-value" id="totalRelevantVal">8</span>
+                </div>
+                <div class="live-output">
+                    <div class="live-metric"><div class="lm-name">Precision@10</div><div class="lm-value" id="liveP">—</div></div>
+                    <div class="live-metric"><div class="lm-name">Recall@10</div><div class="lm-value" id="liveR">—</div></div>
+                    <div class="live-metric"><div class="lm-name">F1@10</div><div class="lm-value" id="liveF1">—</div></div>
+                </div>
+            </div>
+
+            <h3><span class="h3-num">2.2</span>Mean Reciprocal Rank (MRR)</h3>
+
+            <div class="formula-box">
+                <div class="formula-name">Mean Reciprocal Rank</div>
+                <div class="formula-content">
+                    $$\text{MRR} = \frac{1}{|Q|}\sum_{i=1}^{|Q|} \frac{1}{\operatorname{rank}_i}$$
+                </div>
+            </div>
+
+            <p>$\operatorname{rank}_i$ denotes the position of the <em>first</em> relevant document for query $q_i$. MRR is especially meaningful when the user typically reads only the first result (search UIs, FAQ bots).</p>
+
+            <div class="example-box worked">
+                <h4>✏️ Worked example: MRR over 4 queries</h4>
+                <table class="data-table">
+                    <thead><tr><th>Query</th><th>First relevant rank</th><th>Reciprocal</th></tr></thead>
+                    <tbody>
+                        <tr><td>$q_1$: "Thiele-Small parameters"</td><td>1</td><td>$1/1 = 1.000$</td></tr>
+                        <tr><td>$q_2$: "FEM simulation"</td><td>3</td><td>$1/3 = 0.333$</td></tr>
+                        <tr><td>$q_3$: "ISO tolerance calculation"</td><td>2</td><td>$1/2 = 0.500$</td></tr>
+                        <tr><td>$q_4$: "Heat treatment of steel"</td><td>1</td><td>$1/1 = 1.000$</td></tr>
+                    </tbody>
+                </table>
+                <div class="calc-steps">
+                    <div class="calc-step"><span class="step-number">1</span><div class="step-content">$\text{MRR} = \frac{1}{4}(1.000 + 0.333 + 0.500 + 1.000) = 0.708$</div></div>
+                </div>
+                <div class="result"><span class="label">MRR =</span><span class="value">0.708</span></div>
+            </div>
+
+            <h3><span class="h3-num">2.3</span>Normalized Discounted Cumulative Gain (NDCG)</h3>
+
+            <div class="reference">
+                📖 <strong>Scientific basis:</strong> Järvelin &amp; Kekäläinen (2002). "Cumulated Gain-Based Evaluation of IR Techniques." <em>ACM TOIS</em>, 20(4), pp. 422–446. DOI: <a href="https://doi.org/10.1145/582415.582418">10.1145/582415.582418</a>
+            </div>
+
+            <div class="formula-box">
+                <div class="formula-name">DCG · IDCG · NDCG</div>
+                <div class="formula-content">
+                    $$\text{DCG@}K = \sum_{i=1}^{K} \frac{2^{\operatorname{rel}_i} - 1}{\log_{2}(i+1)}, \qquad \text{NDCG@}K = \frac{\text{DCG@}K}{\text{IDCG@}K}$$
+                </div>
+            </div>
+
+            <p>NDCG is the only one of the metrics presented here that admits <em>graded relevance</em> (e.g., $\operatorname{rel}_i \in \{0,1,2,3\}$): "not relevant", "marginal", "relevant", "highly relevant". The logarithm in the denominator implements <em>position discounting</em>: later hits contribute less to the overall score.</p>
+
+            <div class="example-box worked">
+                <h4>✏️ Worked example: NDCG@5 — AOI defect detection</h4>
+                <table class="data-table">
+                    <thead><tr><th>Rank $i$</th><th>Document</th><th>$\operatorname{rel}_i$</th><th>$2^{\operatorname{rel}_i}-1$</th><th>$\log_2(i+1)$</th><th>Gain</th></tr></thead>
+                    <tbody>
+                        <tr><td>1</td><td>"Deep learning for AOI"</td><td>3</td><td>7</td><td>1.000</td><td>7.000</td></tr>
+                        <tr><td>2</td><td>"Introduction to QA"</td><td>0</td><td>0</td><td>1.585</td><td>0.000</td></tr>
+                        <tr><td>3</td><td>"AOI illumination"</td><td>2</td><td>3</td><td>2.000</td><td>1.500</td></tr>
+                        <tr><td>4</td><td>"Statistics"</td><td>1</td><td>1</td><td>2.322</td><td>0.431</td></tr>
+                        <tr><td>5</td><td>"CNN defect classification"</td><td>3</td><td>7</td><td>2.585</td><td>2.708</td></tr>
+                    </tbody>
+                </table>
+                <div class="calc-steps">
+                    <div class="calc-step"><span class="step-number">1</span><div class="step-content">$\text{DCG@}5 = 7.00 + 0 + 1.50 + 0.43 + 2.71 = 11.64$</div></div>
+                    <div class="calc-step"><span class="step-number">2</span><div class="step-content">Ideal ordering: $(3,3,2,1,0)$ → $\text{IDCG@}5 = 13.36$</div></div>
+                    <div class="calc-step"><span class="step-number">3</span><div class="step-content">$\text{NDCG@}5 = \dfrac{11.64}{13.36} = 0.871$</div></div>
+                </div>
+                <div class="result"><span class="label">NDCG@5 =</span><span class="value">0.871</span></div>
+            </div>
+
+            <div class="figure">
+                <div class="figure-container">
+                    <canvas id="retrievalMetricsChart" height="280"></canvas>
+                </div>
+                <figcaption><strong>Fig. 1.</strong> Comparison of the four retrieval metrics for the shared application scenario.</figcaption>
+            </div>
+
+            <h3><span class="h3-num">2.4</span>Confusion matrix &amp; precision-recall curve</h3>
+
+            <p>A complete diagnosis of retrieval behavior requires examining the <em>full</em> trade-off curve, not just a single point:</p>
+
+            <div class="figure">
+                <div class="figure-container">
+                    <canvas id="prCurveChart" height="300"></canvas>
+                </div>
+                <figcaption><strong>Fig. 2.</strong> Precision-recall curves of three hypothetical retrievers. The <em>average precision</em> (AP) corresponds to the area under the curve and is the position-aware generalization of precision.</figcaption>
+            </div>
+
+            <div class="figure">
+                <div class="figure-container">
+                    <canvas id="confusionChart" height="280"></canvas>
+                </div>
+                <figcaption><strong>Fig. 3.</strong> Confusion matrix for retrieval classification. TP = relevant + retrieved, FP = irrelevant + retrieved, FN = relevant + not retrieved, TN = irrelevant + not retrieved.</figcaption>
+            </div>
+
+            <div class="warning">
+                <h4>⚠️ Critical limitation</h4>
+                <p>All four metrics presuppose that ground-truth relevance is known — in practice an <em>annotation-expensive</em> process. In large corpora, therefore, only a sample is typically annotated, leading to wide confidence intervals. Furthermore, semantically similar but lexically different documents are often incorrectly marked as irrelevant (annotator bias).</p>
+            </div>
+        </section>
+
+        <!-- ============== 3 ============== -->
+        <section id="part3" class="chapter">
+            <div class="chapter-header">
+                <span class="chapter-num">03</span>
+                <h2 class="chapter-title">RAGAS Framework: Generation Metrics</h2>
+            </div>
+
+            <div class="reference">
+                📖 <strong>Es, S., James, J., Espinosa-Anke, L., &amp; Schockaert, S.</strong> (2024). "RAGAS: Automated Evaluation of Retrieval Augmented Generation." <em>EACL 2024 Demonstrations</em>, pp. 150–158. <a href="https://aclanthology.org/2024.eacl-demo.16/">[PDF]</a>
+            </div>
+
+            <p>The RAGAS framework is <em>reference-free</em>: it requires no human-annotated gold answers, instead using a "judge LLM" to operationalize the evaluation criteria. The four main metrics systematically cover both pipeline components:</p>
+
+            <table class="summary-table">
+                <thead><tr><th>Metric</th><th>Compares</th><th>Quantifies</th><th>Component</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>Faithfulness</strong></td><td>Answer vs. context</td><td>Faithfulness / hallucination</td><td>Generator $\mathcal{G}$</td></tr>
+                    <tr><td><strong>Answer relevance</strong></td><td>Answer vs. query</td><td>Topic alignment</td><td>Generator $\mathcal{G}$</td></tr>
+                    <tr><td><strong>Context precision</strong></td><td>Context vs. query</td><td>Signal/noise in context</td><td>Retriever $\mathcal{R}$</td></tr>
+                    <tr><td><strong>Context recall</strong></td><td>Context vs. gold answer</td><td>Completeness</td><td>Retriever $\mathcal{R}$</td></tr>
+                </tbody>
+            </table>
+
+            <h3><span class="h3-num">3.1</span>Faithfulness</h3>
+            <div class="formula-box">
+                <div class="formula-name">Faithfulness</div>
+                <div class="formula-content">
+                    $$F = \frac{|\{\,s \in S(\hat y) \;:\; s \;\text{is supported by}\; c\}|}{|S(\hat y)|}$$
+                </div>
+            </div>
+            <p>Here $S(\hat y)$ decomposes the generated answer into atomic claims, each individually checked against the context $c$. A claim is considered "supported" if it is <em>logically derivable</em> from $c$.</p>
+
+            <div class="example-box worked">
+                <h4>✏️ Worked example: Faithfulness — materials engineering</h4>
+                <p><strong>Context $c$:</strong> "42CrMo4 is a tempered steel with a tensile strength of 900–1100 MPa. Hardness 28–34 HRC. Weldable with preheating."</p>
+                <p><strong>Answer $\hat y$:</strong> "42CrMo4 has a tensile strength of 900–1100 MPa, a hardness of 28–34 HRC, is weldable with preheating, and is highly corrosion-resistant."</p>
+                <table class="data-table">
+                    <thead><tr><th>#</th><th>Atomic claim</th><th>Supported by $c$?</th></tr></thead>
+                    <tbody>
+                        <tr><td>1</td><td>Tensile strength 900–1100 MPa</td><td class="relevant">✓</td></tr>
+                        <tr><td>2</td><td>Hardness 28–34 HRC</td><td class="relevant">✓</td></tr>
+                        <tr><td>3</td><td>Weldable with preheating</td><td class="relevant">✓</td></tr>
+                        <tr><td>4</td><td>Corrosion-resistant</td><td class="not-relevant">✗ Hallucination!</td></tr>
+                    </tbody>
+                </table>
+                <div class="result"><span class="label">Faithfulness =</span><span class="value">0.75 (3/4)</span></div>
+            </div>
+
+            <!-- INTERACTIVE: Faithfulness Counter -->
+            <div class="interactive-panel">
+                <h4>🎮 Interactive calculator: Faithfulness</h4>
+                <p class="hint">Set the number of supported and total claims — the metric updates live.</p>
+                <div class="slider-row">
+                    <label for="supportedClaims">Supported claims:</label>
+                    <input type="range" id="supportedClaims" min="0" max="20" value="6" step="1">
+                    <span class="slider-value" id="supportedVal">6</span>
+                </div>
+                <div class="slider-row">
+                    <label for="totalClaims">Total claims:</label>
+                    <input type="range" id="totalClaims" min="1" max="20" value="8" step="1">
+                    <span class="slider-value" id="totalVal">8</span>
+                </div>
+                <div class="live-output">
+                    <div class="live-metric"><div class="lm-name">Faithfulness</div><div class="lm-value" id="faithVal">—</div></div>
+                    <div class="live-metric"><div class="lm-name">Hallucination rate</div><div class="lm-value" id="hallucinationVal">—</div></div>
+                </div>
+            </div>
+
+            <h3><span class="h3-num">3.2</span>Answer Relevance</h3>
+            <div class="formula-box">
+                <div class="formula-name">Answer Relevance</div>
+                <div class="formula-content">
+                    $$\text{AR}(q, \hat y) = \frac{1}{n}\sum_{j=1}^{n} \cos\bigl(\mathbf{e}(q),\; \mathbf{e}(\tilde q_j)\bigr) \quad\text{with}\quad \tilde q_j \sim \text{LLM}(\hat y)$$
+                </div>
+            </div>
+            <p>From the generated answer $\hat y$, $n$ <em>synthetic questions</em> $\tilde q_j$ are back-generated. The cosine similarity of their embeddings to the original query $q$ measures whether the answer addresses the right question.</p>
+
+            <div class="example-box worked">
+                <h4>✏️ Worked example: Answer Relevance — PID controller</h4>
+                <p><strong>Query $q$:</strong> "How do I tune a PID controller?"</p>
+                <table class="data-table">
+                    <thead><tr><th>Synthetic question $\tilde q_j$</th><th>Cosine similarity</th></tr></thead>
+                    <tbody>
+                        <tr><td>"How do I tune PID with Ziegler-Nichols?"</td><td class="relevant">0.92</td></tr>
+                        <tr><td>"What are $K_p$, $T_i$, $T_d$?"</td><td>0.68</td></tr>
+                        <tr><td>"Who invented the PID controller?"</td><td class="not-relevant">0.25</td></tr>
+                    </tbody>
+                </table>
+                <div class="calc-steps">
+                    <div class="calc-step"><span class="step-number">1</span><div class="step-content">$\text{AR} = \frac{1}{3}(0.92 + 0.68 + 0.25) \approx 0.62$</div></div>
+                </div>
+                <div class="result"><span class="label">Answer Relevance =</span><span class="value">0.62</span></div>
+            </div>
+
+            <h3><span class="h3-num">3.3</span>Context Recall</h3>
+            <div class="formula-box">
+                <div class="formula-name">Context Recall</div>
+                <div class="formula-content">
+                    $$\text{CR} = \frac{|\{\,s \in S(y^*) \;:\; s \in c\}|}{|S(y^*)|}$$
+                </div>
+            </div>
+            <p>The fraction of atomic claims from the gold answer $y^*$ that is covered by the retrieved context $c$. Low CR &rarr; retriever delivers incomplete context &rarr; the generator <em>cannot</em> deliver a complete answer even with perfect faithfulness.</p>
+
+            <div class="example-box worked">
+                <h4>✏️ Worked example: Context Recall — welding defects</h4>
+                <p><strong>Gold answer $y^*$ covers 6 claims:</strong> porosity, undercut, lack of fusion, cracks, spatter, root defects</p>
+                <p><strong>Retrieved context $c$ contains:</strong> porosity, undercut, lack of fusion, spatter (4 of 6)</p>
+                <div class="result"><span class="label">Context Recall =</span><span class="value">0.667 (4/6)</span></div>
+            </div>
+
+            <div class="figure">
+                <div class="figure-container">
+                    <canvas id="ragasRadarChart" height="320"></canvas>
+                </div>
+                <figcaption><strong>Fig. 4.</strong> RAGAS profile of two hypothetical systems compared. The plot visualizes strengths and weaknesses per dimension.</figcaption>
+            </div>
+
+            <div class="insight">
+                <h4>💡 Diagnostic use of the RAGAS metrics</h4>
+                <p>The four metrics enable causal diagnosis: <strong>low context recall</strong> → retriever problem. <strong>Low faithfulness with good context recall</strong> → generator hallucinates. <strong>Low answer relevance</strong> → generator answers a different question. This modularity is the central advance over monolithic end-to-end metrics.</p>
+            </div>
+        </section>
+
+        <!-- ============== 4 ============== -->
+        <section id="part4" class="chapter">
+            <div class="chapter-header">
+                <span class="chapter-num">04</span>
+                <h2 class="chapter-title">Fine-Tuning Metrics</h2>
+            </div>
+
+            <p>Classical text-generation metrics evaluate how well a generated hypothesis $\hat y$ matches one (or more) reference answer(s) $y^*$. They differ primarily in <em>granularity</em> (n-grams vs. tokens) and in <em>representation</em> (lexical vs. semantic).</p>
+
+            <h3><span class="h3-num">4.1</span>BLEU (Bilingual Evaluation Understudy)</h3>
+            <div class="reference">
+                📖 <strong>Papineni et al.</strong> (2002). "BLEU: a Method for Automatic Evaluation of Machine Translation." <em>ACL 2002</em>, pp. 311–318. DOI: <a href="https://doi.org/10.3115/1073083.1073135">10.3115/1073083.1073135</a>
+            </div>
+            <div class="formula-box">
+                <div class="formula-name">BLEU-N</div>
+                <div class="formula-content">
+                    $$\text{BLEU} = \text{BP} \cdot \exp\!\left(\sum_{n=1}^{N} w_n \log p_n\right), \quad \text{BP} = \begin{cases} 1 & \text{if } |\hat y| > |y^*| \\ e^{1 - |y^*|/|\hat y|} & \text{otherwise}\end{cases}$$
+                </div>
+            </div>
+            <p>BLEU geometrically averages n-gram precisions $p_n$ and multiplies by a <em>brevity penalty</em> (BP) that penalizes overly short hypotheses. Standard weights: $w_n = 1/N$ with $N=4$.</p>
+
+            <div class="example-box worked">
+                <h4>✏️ Worked example: BLEU-1 and BLEU-2</h4>
+                <p><strong>Reference:</strong> "The motor reaches a speed of 3000 revolutions per minute"</p>
+                <p><strong>Generated:</strong> "The motor has a speed of 3000 revolutions per minute"</p>
+                <div class="calc-steps">
+                    <div class="calc-step"><span class="step-number">1</span><div class="step-content">Unigram precision $p_1 = 8/9 \approx 0.889$ (most words match)</div></div>
+                    <div class="calc-step"><span class="step-number">2</span><div class="step-content">Bigram precision $p_2 = 6/8 = 0.750$</div></div>
+                    <div class="calc-step"><span class="step-number">3</span><div class="step-content">Equal length → $\text{BP} = 1$</div></div>
+                </div>
+                <div class="result"><span class="label">BLEU-1 ≈</span><span class="value">0.889</span></div>
+                <div class="result"><span class="label">BLEU-2 ≈</span><span class="value">0.816</span></div>
+            </div>
+
+            <h3><span class="h3-num">4.2</span>ROUGE (Recall-Oriented Understudy for Gisting Evaluation)</h3>
+            <div class="reference">
+                📖 <strong>Lin, C.-Y.</strong> (2004). "ROUGE: A Package for Automatic Evaluation of Summaries." <em>ACL Workshop</em>, pp. 74–81.
+            </div>
+            <div class="formula-box">
+                <div class="formula-name">ROUGE-N</div>
+                <div class="formula-content">
+                    $$\text{ROUGE-}N = \frac{\sum_{g \in y^*} \min(\#g_{\hat y}, \#g_{y^*})}{\sum_{g \in y^*} \#g_{y^*}}$$
+                </div>
+            </div>
+            <p>ROUGE-N is recall-oriented (the denominator is based on the reference, not the hypothesis). ROUGE-L uses the longest common subsequence (LCS) and is robust to word-order changes.</p>
+
+            <h3><span class="h3-num">4.3</span>BERTScore</h3>
+            <div class="reference">
+                📖 <strong>Zhang, T., Kishore, V., Wu, F., Weinberger, K. Q., &amp; Artzi, Y.</strong> (2020). "BERTScore: Evaluating Text Generation with BERT." <em>ICLR 2020</em>. <a href="https://arxiv.org/abs/1904.09675">[arXiv:1904.09675]</a>
+            </div>
+            <div class="formula-box">
+                <div class="formula-name">BERTScore F1</div>
+                <div class="formula-content">
+                    $$P_{\text{BERT}} = \frac{1}{|\hat y|}\sum_{\hat x \in \hat y} \max_{x \in y^*} \mathbf{e}(\hat x)^{\!\top}\mathbf{e}(x), \quad F_1 = \frac{2 P R}{P+R}$$
+                </div>
+            </div>
+            <p>Instead of counting exact token matches, BERTScore computes the maximum cosine similarity of contextualized embeddings (e.g., from BERT or RoBERTa). This solves the fundamental problem of lexical metrics: <em>semantic equivalence under lexical variation</em>.</p>
+
+            <div class="example-box worked">
+                <h4>✏️ BERTScore detects synonyms</h4>
+                <p><strong>Reference:</strong> "The transmission transmits a torque"</p>
+                <p><strong>Generated:</strong> "The gearbox forwards a torque"</p>
+                <p>Lexical metrics: BLEU is low (different words). <strong>BERTScore: high</strong>, because "transmits" and "forwards" are semantically equivalent in this context.</p>
+                <div class="result"><span class="label">BERTScore F1 ≈</span><span class="value">0.94</span></div>
+            </div>
+
+            <div class="figure">
+                <div class="figure-container">
+                    <canvas id="metricComparisonChart" height="300"></canvas>
+                </div>
+                <figcaption><strong>Fig. 5.</strong> Metric behavior as lexical variation increases. BERTScore degrades substantially more slowly than BLEU/ROUGE on semantically equivalent rephrasings.</figcaption>
+            </div>
+
+            <div class="warning">
+                <h4>⚠️ Known weaknesses of classical metrics</h4>
+                <ul>
+                    <li><strong>BLEU/ROUGE</strong>: correlate <em>weakly</em> with human judgment in open-domain generation (Reiter, 2018; Sai et al., 2022). With single reference answers the variance is extremely high.</li>
+                    <li><strong>BERTScore</strong>: depends on the encoder model used. Cross-lingual transfer and domain drift can distort values.</li>
+                    <li><strong>All three</strong>: can be subject to <em>Goodhart's Law</em> — "When a measure becomes a target, it ceases to be a good measure."</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ============== 5 — STATISTICAL EVALUATION ============== -->
+        <section id="part5" class="chapter">
+            <div class="chapter-header">
+                <span class="chapter-num">05</span>
+                <h2 class="chapter-title">Statistical Evaluation &amp; Significance</h2>
+            </div>
+
+            <p>A single metric value on a test set is a <em>point estimate</em> with sampling variance. Without quantifying this uncertainty, statements like "system A is better than system B" are scientifically unfounded. This chapter introduces three canonical tools: confidence intervals, the bootstrap, and inter-annotator agreement.</p>
+
+            <h3><span class="h3-num">5.1</span>Confidence intervals for metrics</h3>
+            <p>For a mean $\bar X$ over $n$ queries with sample standard deviation $s$, the central limit theorem gives approximately:</p>
+            <div class="formula-box">
+                <div class="formula-name">95% confidence interval (normal-approximated)</div>
+                <div class="formula-content">
+                    $$\text{CI}_{95\%} = \bar X \pm 1.96 \cdot \frac{s}{\sqrt{n}}$$
+                </div>
+            </div>
+
+            <div class="example-box worked">
+                <h4>✏️ Worked example: CI for MRR</h4>
+                <p>Over 100 test queries, $\overline{\text{MRR}} = 0.708$ with $s = 0.28$. The 95% CI is:</p>
+                <div class="calc-steps">
+                    <div class="calc-step"><span class="step-number">1</span><div class="step-content">Standard error: $\text{SE} = 0.28/\sqrt{100} = 0.028$</div></div>
+                    <div class="calc-step"><span class="step-number">2</span><div class="step-content">Half-width: $1.96 \cdot 0.028 = 0.055$</div></div>
+                    <div class="calc-step"><span class="step-number">3</span><div class="step-content">$\text{CI}_{95\%} = [0.653,\; 0.763]$</div></div>
+                </div>
+                <div class="result"><span class="label">95% CI =</span><span class="value">[0.653 ; 0.763]</span></div>
+            </div>
+
+            <h3><span class="h3-num">5.2</span>Bootstrap resampling</h3>
+            <p>For non-normal metrics (e.g., NDCG, BLEU), the non-parametric <em>bootstrap</em> procedure (Efron, 1979) is preferable. From the test set, $B$ (typically 1000) random samples are drawn with replacement; quantiles are then read directly from the distribution of the $B$ metric values.</p>
+
+            <div class="figure">
+                <div class="figure-container">
+                    <canvas id="bootstrapChart" height="280"></canvas>
+                </div>
+                <figcaption><strong>Fig. 6.</strong> Bootstrap distribution of NDCG@10 over 1000 resamples. The 95% CI is read off as the 2.5% and 97.5% quantiles (dashed lines).</figcaption>
+            </div>
+
+            <h3><span class="h3-num">5.3</span>Inter-annotator agreement (Cohen's $\kappa$)</h3>
+            <p>When relevance is annotated by humans, the reliability of the annotation itself must be checked. Cohen's kappa corrects observed agreement by the agreement expected by chance:</p>
+            <div class="formula-box">
+                <div class="formula-name">Cohen's Kappa</div>
+                <div class="formula-content">
+                    $$\kappa = \frac{p_o - p_e}{1 - p_e}$$
+                </div>
+            </div>
+
+            <table class="summary-table">
+                <thead><tr><th>$\kappa$ value</th><th>Interpretation (Landis &amp; Koch, 1977)</th></tr></thead>
+                <tbody>
+                    <tr><td>&lt; 0.00</td><td>Worse than chance</td></tr>
+                    <tr><td>0.01 – 0.20</td><td>Slight agreement</td></tr>
+                    <tr><td>0.21 – 0.40</td><td>Fair agreement</td></tr>
+                    <tr><td>0.41 – 0.60</td><td>Moderate agreement</td></tr>
+                    <tr><td>0.61 – 0.80</td><td>Substantial agreement</td></tr>
+                    <tr><td>0.81 – 1.00</td><td>Almost perfect</td></tr>
+                </tbody>
+            </table>
+
+            <div class="insight">
+                <h4>💡 Scientific reporting practice</h4>
+                <p>It is now standard practice in conference papers (ACL, EMNLP, NeurIPS) to report <em>every</em> primary metric with a confidence interval <strong>plus</strong> a significance test against the baseline (e.g., paired bootstrap test). An improvement of 0.3 BLEU points without a significance statement is generally not considered publishable.</p>
+            </div>
+        </section>
+
+        <!-- ============== 6 — INTERACTIVE COMPARISON ============== -->
+        <section id="part6" class="chapter">
+            <div class="chapter-header">
+                <span class="chapter-num">06</span>
+                <h2 class="chapter-title">Interactive Metric Comparison</h2>
+            </div>
+
+            <p>The following live demo shows the fundamental behavior of BLEU, ROUGE, and BERTScore on five classes of text variation. Choose a variation to see how the three metrics react in qualitatively different ways.</p>
+
+            <div class="interactive-panel">
+                <h4>🎮 Metric playground</h4>
+                <p class="hint">Pick a variation. The values are based on typical empirical magnitudes from Sai et al. (2022).</p>
+
+                <div id="variant-buttons" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom: 18px;">
+                    <button class="variant-btn active" data-variant="exact">Exact match</button>
+                    <button class="variant-btn" data-variant="oneword">One word changed</button>
+                    <button class="variant-btn" data-variant="synonym">Synonym</button>
+                    <button class="variant-btn" data-variant="paraphrase">Full paraphrase</button>
+                    <button class="variant-btn" data-variant="contradict">Contradiction (same words)</button>
+                </div>
+
+                <div id="variant-display" style="font-family: var(--font-serif); font-size: 1.05em; padding: 18px 22px; background: var(--bg-alt); border-radius: var(--radius-sm); margin-bottom: 18px; line-height: 1.8;">
+                    <div><strong>Reference:</strong> <span id="ref-text">The motor reaches 3000 revolutions per minute.</span></div>
+                    <div style="margin-top:8px;"><strong>Hypothesis:</strong> <span id="hyp-text">The motor reaches 3000 revolutions per minute.</span></div>
+                </div>
+
+                <div class="live-output">
+                    <div class="live-metric"><div class="lm-name">BLEU-2</div><div class="lm-value" id="bleuVal">1.00</div></div>
+                    <div class="live-metric"><div class="lm-name">ROUGE-L</div><div class="lm-value" id="rougeVal">1.00</div></div>
+                    <div class="live-metric"><div class="lm-name">BERTScore</div><div class="lm-value" id="bertVal">1.00</div></div>
+                </div>
+
+                <p id="variant-explanation" style="margin-top: 16px; font-family: var(--font-sans); font-size: 0.92em; color: var(--text-soft); padding: 12px 16px; background: var(--surface); border-radius: var(--radius-sm); border-left: 3px solid var(--info);">
+                    Identical hypothesis and reference → all three metrics return their maximum value.
+                </p>
+            </div>
+
+            <style>
+                .variant-btn {
+                    background: var(--surface); border: 1px solid var(--border);
+                    color: var(--text-soft); padding: 8px 14px; border-radius: var(--radius-sm);
+                    font-family: var(--font-sans); font-size: 0.88em; cursor: pointer;
+                    transition: all 0.15s ease;
+                }
+                .variant-btn:hover { border-color: var(--primary); color: var(--primary); }
+                .variant-btn.active {
+                    background: var(--primary); border-color: var(--primary); color: white;
+                    box-shadow: var(--shadow-sm);
+                }
+            </style>
+
+            <div class="warning">
+                <h4>⚠️ The contradiction case</h4>
+                <p>Pay particular attention to the last variant: when the hypothesis nearly fully repeats the reference lexically but states the <em>opposite</em> semantically (e.g., "does NOT reach 3000…"), BLEU stays artificially high. This is a well-known failure mode of all n-gram metrics (Freitag et al., 2022) and one of the central motivations for developing <em>NLI-based</em> metrics such as BLEURT.</p>
+            </div>
+        </section>
+
+        <!-- ============== 7 — DECISION GUIDE ============== -->
+        <section id="part7" class="chapter">
+            <div class="chapter-header">
+                <span class="chapter-num">07</span>
+                <h2 class="chapter-title">Decision Guide</h2>
+            </div>
+
+            <p>The choice of the "right" metric depends on application context. The table below offers pragmatic recommendations for typical engineering scenarios:</p>
+
+            <table class="summary-table">
+                <thead><tr><th>Use case</th><th>Primary metric</th><th>Secondary metric</th><th>Reasoning</th></tr></thead>
+                <tbody>
+                    <tr><td>Safety data sheets (RAG)</td><td>Faithfulness</td><td>Context recall</td><td>Hallucinations are safety-critical</td></tr>
+                    <tr><td>Standards / regulation search</td><td>Context recall</td><td>NDCG@10</td><td>Completeness over precision</td></tr>
+                    <tr><td>FAQ bot / search UI</td><td>MRR</td><td>Precision@1</td><td>First result dominates UX</td></tr>
+                    <tr><td>Machine translation</td><td>BLEU + chrF</td><td>BERTScore</td><td>Established standard metrics</td></tr>
+                    <tr><td>Summarization</td><td>ROUGE-L</td><td>BERTScore</td><td>Recall orientation essential</td></tr>
+                    <tr><td>Code generation</td><td>Pass@K (functional test)</td><td>BLEU</td><td>Correctness is binary</td></tr>
+                    <tr><td>Open-domain QA</td><td>RAGAS profile (all 4)</td><td>Human eval</td><td>Multidimensional quality</td></tr>
+                </tbody>
+            </table>
+
+            <h3><span class="h3-num">7.1</span>Anti-patterns: common evaluation mistakes</h3>
+            <div class="warning">
+                <h4>⚠️ What <em>not</em> to do</h4>
+                <ul>
+                    <li><strong>One-dimensional optimization</strong>: looking at only one metric ignores the multidimensional nature of quality.</li>
+                    <li><strong>Metric hacking (Goodhart's Law)</strong>: directly optimizing on a metric often leads to quality loss on other axes.</li>
+                    <li><strong>Neglecting human evaluation</strong>: automatic metrics are <em>proxies</em>; final validation requires sample-based human evaluation.</li>
+                    <li><strong>Forgetting the retrieval component</strong>: in RAG, poor end-to-end quality is often wrongly attributed to the generator when in fact retrieval is failing.</li>
+                    <li><strong>Missing statistical significance</strong>: point estimates without confidence intervals are not informative (see Ch. 5).</li>
+                    <li><strong>Test set contamination</strong>: when training and test data overlap, all metrics become unreliable.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ============== 8 — PYTHON ============== -->
+        <section id="part8" class="chapter">
+            <div class="chapter-header">
+                <span class="chapter-num">08</span>
+                <h2 class="chapter-title">Python Implementation</h2>
+            </div>
+
+            <p>The reference implementations below show the core logic. For production systems, use of established libraries is recommended (RAGAS, evaluate, bert_score, scikit-learn).</p>
+
+            <h3><span class="h3-num">8.1</span>Custom implementation of retrieval metrics</h3>
+<pre><code>import numpy as np
+from typing import List, Sequence
+
+def precision_at_k(retrieved: Sequence[str], relevant: set, k: int) -> float:
+    """Fraction of top-K hits that are relevant."""
+    top_k = retrieved[:k]
+    return len([d for d in top_k if d in relevant]) / k
+
+def recall_at_k(retrieved: Sequence[str], relevant: set, k: int) -> float:
+    """Fraction of all relevant items that appear in the top-K."""
+    top_k = retrieved[:k]
+    return len([d for d in top_k if d in relevant]) / len(relevant)
+
+def reciprocal_rank(retrieved: Sequence[str], relevant: set) -> float:
+    """1/rank of the first relevant hit (0 if none)."""
+    for i, doc in enumerate(retrieved, 1):
+        if doc in relevant:
+            return 1.0 / i
+    return 0.0
+
+def mean_reciprocal_rank(all_retrieved, all_relevant) -> float:
+    return float(np.mean([
+        reciprocal_rank(r, rel) for r, rel in zip(all_retrieved, all_relevant)
+    ]))
+
+def ndcg_at_k(relevance_grades: Sequence[float], k: int) -> float:
+    """NDCG with graded relevance."""
+    def dcg(scores):
+        return sum((2**s - 1) / np.log2(i + 2) for i, s in enumerate(scores[:k]))
+    actual = dcg(relevance_grades)
+    ideal  = dcg(sorted(relevance_grades, reverse=True))
+    return actual / ideal if ideal &gt; 0 else 0.0</code></pre>
+
+            <h3><span class="h3-num">8.2</span>Bootstrap confidence interval</h3>
+<pre><code>def bootstrap_ci(scores: np.ndarray, n_boot: int = 1000,
+                 alpha: float = 0.05, seed: int = 42) -> tuple:
+    """Non-parametric 95% CI via bootstrap resampling."""
+    rng = np.random.default_rng(seed)
+    n = len(scores)
+    boot_means = np.empty(n_boot)
+    for b in range(n_boot):
+        idx = rng.integers(0, n, size=n)
+        boot_means[b] = scores[idx].mean()
+    lo = np.quantile(boot_means, alpha / 2)
+    hi = np.quantile(boot_means, 1 - alpha / 2)
+    return float(scores.mean()), float(lo), float(hi)</code></pre>
+
+            <h3><span class="h3-num">8.3</span>RAGAS, BLEU, ROUGE, BERTScore (libraries)</h3>
+<pre><code># RAGAS
+from ragas import evaluate
+from ragas.metrics import faithfulness, answer_relevancy, context_recall, context_precision
+
+results = evaluate(
+    dataset=eval_ds,
+    metrics=[faithfulness, answer_relevancy, context_recall, context_precision],
+)
+
+# BLEU / ROUGE
+from evaluate import load
+bleu  = load("bleu")
+rouge = load("rouge")
+bleu_score  = bleu.compute(predictions=hyps,  references=[[r] for r in refs])
+rouge_score = rouge.compute(predictions=hyps, references=refs)
+
+# BERTScore (English)
+from bert_score import score
+P, R, F1 = score(hyps, refs, lang="en", model_type="roberta-large")</code></pre>
+        </section>
+
+        <!-- ============== 9 — QUIZ ============== -->
+        <section id="part9" class="chapter">
+            <div class="chapter-header">
+                <span class="chapter-num">09</span>
+                <h2 class="chapter-title">Self-Test</h2>
+            </div>
+
+            <p>Six multiple-choice questions for self-assessment. Click an answer to receive immediate feedback.</p>
+
+            <div id="quiz-container">
+                <!-- Quiz items rendered via JS -->
+            </div>
+
+            <div id="quiz-summary" style="display:none; margin-top: 24px; padding: 22px 28px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-soft) 100%); color:white; border-radius: var(--radius); font-family: var(--font-sans);">
+                <div style="font-size: 0.85em; letter-spacing: 0.1em; text-transform: uppercase; opacity:0.8; margin-bottom: 6px;">Your result</div>
+                <div style="font-size: 2em; font-weight: 700; font-family: var(--font-serif);" id="quiz-score">—</div>
+                <div id="quiz-message" style="margin-top: 8px; opacity:0.9;"></div>
+            </div>
+        </section>
+
+        <!-- ============== 10 — EXERCISES ============== -->
+        <section id="part10" class="chapter">
+            <div class="chapter-header">
+                <span class="chapter-num">10</span>
+                <h2 class="chapter-title">Exercises</h2>
+            </div>
+
+            <div class="example-box">
+                <h4>📝 Exercise 1: Precision &amp; Recall</h4>
+                <p>10 documents are retrieved; those at ranks 1, 3, 5, 8, 10 are relevant. The corpus contains 15 relevant documents in total.</p>
+                <details><summary>Show solution</summary>
+                    <div>
+                        <p>Precision@5 = $3/5 = 0.60$ &nbsp;|&nbsp; Precision@10 = $5/10 = 0.50$</p>
+                        <p>Recall@5 = $3/15 = 0.20$ &nbsp;|&nbsp; Recall@10 = $5/15 \approx 0.333$</p>
+                        <p>F1@10 = $\frac{2 \cdot 0.5 \cdot 0.333}{0.5 + 0.333} \approx 0.40$</p>
+                    </div>
+                </details>
+            </div>
+
+            <div class="example-box">
+                <h4>📝 Exercise 2: MRR over 5 queries</h4>
+                <p>First relevant ranks: $q_1 \to 1$, $q_2 \to 4$, $q_3 \to 2$, $q_4 \to 1$, $q_5 \to 3$</p>
+                <details><summary>Show solution</summary>
+                    <div>
+                        <p>$\text{MRR} = \dfrac{1 + 0.25 + 0.5 + 1 + 0.333}{5} = \dfrac{3.083}{5} \approx 0.617$</p>
+                    </div>
+                </details>
+            </div>
+
+            <div class="example-box">
+                <h4>📝 Exercise 3: Faithfulness</h4>
+                <p>Context: "Transformer: 230&nbsp;V → 24&nbsp;V, ratio 9.6&nbsp;:&nbsp;1, power 500&nbsp;W". The answer additionally mentions "95% efficiency" (not present in the context).</p>
+                <details><summary>Show solution</summary>
+                    <div>
+                        <p>3 supported claims + 1 hallucination → $F = 3/4 = 0.75$</p>
+                    </div>
+                </details>
+            </div>
+
+            <div class="example-box">
+                <h4>📝 Exercise 4: NDCG with graded relevance</h4>
+                <p>Top-5 relevance grades: $(2, 3, 0, 1, 2)$. Compute NDCG@5.</p>
+                <details><summary>Show solution</summary>
+                    <div>
+                        <p>DCG = $3 + \frac{7}{1.585} + 0 + \frac{1}{2.322} + \frac{3}{2.585} = 3 + 4.416 + 0.431 + 1.160 = 9.007$</p>
+                        <p>Ideal ordering $(3,2,2,1,0)$: IDCG = $7 + \frac{3}{1.585} + \frac{3}{2.000} + \frac{1}{2.322} + 0 = 7 + 1.893 + 1.500 + 0.431 = 10.824$</p>
+                        <p>$\text{NDCG@}5 = 9.007 / 10.824 \approx 0.832$</p>
+                    </div>
+                </details>
+            </div>
+
+            <div class="example-box">
+                <h4>📝 Exercise 5: Confidence interval</h4>
+                <p>On a test set of $n=50$ queries the mean BERTScore is $\bar X = 0.82$ with $s = 0.11$. Compute the 95% CI.</p>
+                <details><summary>Show solution</summary>
+                    <div>
+                        <p>$\text{SE} = 0.11/\sqrt{50} \approx 0.0156$</p>
+                        <p>Half-width: $1.96 \cdot 0.0156 \approx 0.0305$</p>
+                        <p>$\text{CI}_{95\%} = [0.789,\; 0.851]$</p>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- ============== 11 — REFERENCES ============== -->
+        <section id="part11" class="chapter">
+            <div class="chapter-header">
+                <span class="chapter-num">11</span>
+                <h2 class="chapter-title">Quick Reference &amp; Bibliography</h2>
+            </div>
+
+            <h3><span class="h3-num">11.1</span>Metric overview</h3>
+            <table class="summary-table">
+                <thead><tr><th>Metric</th><th>Formula (short)</th><th>Range</th><th>Main use</th></tr></thead>
+                <tbody>
+                    <tr><td>Precision@K</td><td>$|\mathcal{R}_K \cap \mathcal{V}| / K$</td><td>$[0,1]$</td><td>Search</td></tr>
+                    <tr><td>Recall@K</td><td>$|\mathcal{R}_K \cap \mathcal{V}| / |\mathcal{V}|$</td><td>$[0,1]$</td><td>Completeness</td></tr>
+                    <tr><td>MRR</td><td>$\frac{1}{|Q|}\sum 1/\text{rank}_i$</td><td>$[0,1]$</td><td>First relevant hit</td></tr>
+                    <tr><td>NDCG@K</td><td>DCG / IDCG</td><td>$[0,1]$</td><td>Graded relevance</td></tr>
+                    <tr><td>Faithfulness</td><td>$|\text{supported}|/|\text{total}|$</td><td>$[0,1]$</td><td>Hallucination detection</td></tr>
+                    <tr><td>BLEU</td><td>$\text{BP}\cdot\exp(\sum w_n \log p_n)$</td><td>$[0,1]$</td><td>Translation</td></tr>
+                    <tr><td>ROUGE-N/L</td><td>n-gram / LCS recall</td><td>$[0,1]$</td><td>Summarization</td></tr>
+                    <tr><td>BERTScore</td><td>$F_1$ of embedding cosines</td><td>$[0,1]$</td><td>Semantic evaluation</td></tr>
+                </tbody>
+            </table>
+
+            <div class="references-section">
+                <h3>📚 Bibliography</h3>
+                <ol>
+                    <li><strong>Es, S., James, J., Espinosa-Anke, L., &amp; Schockaert, S.</strong> (2024). RAGAS: Automated Evaluation of Retrieval Augmented Generation. <em>EACL 2024 Demonstrations</em>, pp. 150–158.</li>
+                    <li><strong>Lewis, P., et al.</strong> (2020). Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks. <em>NeurIPS 2020</em>.</li>
+                    <li><strong>Papineni, K., Roukos, S., Ward, T., &amp; Zhu, W.-J.</strong> (2002). BLEU: a Method for Automatic Evaluation of Machine Translation. <em>ACL 2002</em>, pp. 311–318.</li>
+                    <li><strong>Lin, C.-Y.</strong> (2004). ROUGE: A Package for Automatic Evaluation of Summaries. <em>ACL Workshop on Text Summarization</em>, pp. 74–81.</li>
+                    <li><strong>Zhang, T., Kishore, V., Wu, F., Weinberger, K. Q., &amp; Artzi, Y.</strong> (2020). BERTScore: Evaluating Text Generation with BERT. <em>ICLR 2020</em>.</li>
+                    <li><strong>Järvelin, K., &amp; Kekäläinen, J.</strong> (2002). Cumulated Gain-Based Evaluation of IR Techniques. <em>ACM TOIS</em>, 20(4), pp. 422–446.</li>
+                    <li><strong>Sai, A. B., Mohankumar, A. K., &amp; Khapra, M. M.</strong> (2022). A Survey of Evaluation Metrics Used for NLG Systems. <em>ACM Computing Surveys</em>, 55(2).</li>
+                    <li><strong>Reiter, E.</strong> (2018). A Structured Review of the Validity of BLEU. <em>Computational Linguistics</em>, 44(3), pp. 393–401.</li>
+                    <li><strong>Ovadia, O., et al.</strong> (2024). Fine-Tuning or Retrieval? Comparing Knowledge Injection in LLMs. <em>EMNLP 2024</em>.</li>
+                    <li><strong>Freitag, M., et al.</strong> (2022). Results of the WMT22 Metrics Shared Task. <em>WMT 2022</em>.</li>
+                    <li><strong>Efron, B.</strong> (1979). Bootstrap Methods: Another Look at the Jackknife. <em>The Annals of Statistics</em>, 7(1), pp. 1–26.</li>
+                    <li><strong>Landis, J. R., &amp; Koch, G. G.</strong> (1977). The Measurement of Observer Agreement for Categorical Data. <em>Biometrics</em>, 33(1), pp. 159–174.</li>
+                    <li><strong>Sellam, T., Das, D., &amp; Parikh, A. P.</strong> (2020). BLEURT: Learning Robust Metrics for Text Generation. <em>ACL 2020</em>.</li>
+                </ol>
+            </div>
+        </section>
+
+        <footer class="page-footer">
+            <p>A guide to the quantitative evaluation of RAG systems and fine-tuned Large Language Models</p>
+            <p>
+  Built by 
+  <strong>
+    <a href="https://www.linkedin.com/feed/" target="_blank" rel="noopener">
+      Dr. Kawther Aboalam
+    </a>
+  </strong> 
+  and AI-Agents — 
+  <a href="https://github.com/abka0002/Machine-Learning-Explained" target="_blank" rel="noopener">
+    View on GitHub
+  </a>
+</p>
+            
+        </footer>
+    </main>
+</div>
+
+<script>
+// =================================================================
+//   THEME TOGGLE
+// =================================================================
+const themeToggle = document.getElementById('theme-toggle');
+function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    themeToggle.textContent = t === 'dark' ? '☀️ Light' : '🌙 Dark';
+    try { localStorage.setItem('rag_theme', t); } catch(e){}
+    if (window.allCharts) {
+        window.allCharts.forEach(c => { try { c.update(); } catch(e){} });
+    }
+}
+const saved = (function(){ try { return localStorage.getItem('rag_theme'); } catch(e){ return null; }})() || 'light';
+applyTheme(saved);
+themeToggle.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+});
+
+// =================================================================
+//   READING PROGRESS
+// =================================================================
+const progressBar = document.getElementById('progress-bar');
+window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight);
+    progressBar.style.width = (scrolled * 100) + '%';
+}, { passive: true });
+
+// =================================================================
+//   ACTIVE TOC HIGHLIGHTING
+// =================================================================
+const sections = document.querySelectorAll('section.chapter');
+const tocLinks = document.querySelectorAll('.toc-list a');
+const tocObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const id = entry.target.id;
+            tocLinks.forEach(a => {
+                a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+            });
+        }
+    });
+}, { rootMargin: '-30% 0px -60% 0px' });
+sections.forEach(s => tocObserver.observe(s));
+
+// =================================================================
+//   FADE-IN ANIMATION ON SCROLL
+// =================================================================
+const fadeObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+        if (e.isIntersecting) {
+            e.target.classList.add('animate-in');
+            fadeObserver.unobserve(e.target);
+        }
+    });
+}, { threshold: 0.05 });
+sections.forEach(s => fadeObserver.observe(s));
+
+// =================================================================
+//   INTERACTIVE: Precision / Recall calculator
+// =================================================================
+const precisionGrid = document.getElementById('precision-grid');
+let selectedRanks = new Set([1, 3, 5]);
+
+function renderPrecisionGrid() {
+    precisionGrid.innerHTML = '';
+    for (let i = 1; i <= 10; i++) {
+        const item = document.createElement('div');
+        item.className = 'relevance-item' + (selectedRanks.has(i) ? ' selected' : '');
+        item.innerHTML = `<span class="rank">${i}</span><span class="label">${selectedRanks.has(i) ? 'relevant' : 'click'}</span>`;
+        item.addEventListener('click', () => {
+            if (selectedRanks.has(i)) selectedRanks.delete(i);
+            else selectedRanks.add(i);
+            renderPrecisionGrid();
+            updatePrecisionMetrics();
+        });
+        precisionGrid.appendChild(item);
+    }
+}
+
+function updatePrecisionMetrics() {
+    const totalRelevant = parseInt(document.getElementById('totalRelevant').value);
+    document.getElementById('totalRelevantVal').textContent = totalRelevant;
+    const retrievedRelevant = selectedRanks.size;
+    const p = retrievedRelevant / 10;
+    const r = retrievedRelevant / totalRelevant;
+    const f1 = (p + r) > 0 ? (2 * p * r) / (p + r) : 0;
+    document.getElementById('liveP').textContent = p.toFixed(2);
+    document.getElementById('liveR').textContent = r.toFixed(2);
+    document.getElementById('liveF1').textContent = f1.toFixed(2);
+}
+document.getElementById('totalRelevant').addEventListener('input', updatePrecisionMetrics);
+renderPrecisionGrid();
+updatePrecisionMetrics();
+
+// =================================================================
+//   INTERACTIVE: Faithfulness calculator
+// =================================================================
+const supportedSlider = document.getElementById('supportedClaims');
+const totalSlider = document.getElementById('totalClaims');
+function updateFaithfulness() {
+    let s = parseInt(supportedSlider.value);
+    let t = parseInt(totalSlider.value);
+    if (s > t) { s = t; supportedSlider.value = t; }
+    document.getElementById('supportedVal').textContent = s;
+    document.getElementById('totalVal').textContent = t;
+    const f = s / t;
+    document.getElementById('faithVal').textContent = f.toFixed(2);
+    document.getElementById('hallucinationVal').textContent = ((1 - f) * 100).toFixed(0) + '%';
+}
+supportedSlider.addEventListener('input', updateFaithfulness);
+totalSlider.addEventListener('input', updateFaithfulness);
+updateFaithfulness();
+
+// =================================================================
+//   INTERACTIVE: Metric playground
+// =================================================================
+const variants = {
+    exact: {
+        ref: 'The motor reaches 3000 revolutions per minute.',
+        hyp: 'The motor reaches 3000 revolutions per minute.',
+        bleu: 1.00, rouge: 1.00, bert: 1.00,
+        explain: 'Identical hypothesis and reference → all three metrics return their maximum value.'
+    },
+    oneword: {
+        ref: 'The motor reaches 3000 revolutions per minute.',
+        hyp: 'The motor attains 3000 revolutions per minute.',
+        bleu: 0.79, rouge: 0.88, bert: 0.95,
+        explain: 'One word replaced ("reaches" → "attains"). N-gram metrics penalize this more than BERTScore, because the synonym does not match lexically though it is almost identical semantically.'
+    },
+    synonym: {
+        ref: 'The transmission transmits a torque.',
+        hyp: 'The gearbox forwards a moment.',
+        bleu: 0.30, rouge: 0.42, bert: 0.91,
+        explain: 'Full synonym replacement. BLEU/ROUGE collapse because no n-grams match. BERTScore stays high because the embeddings are semantically very close — this is the strength of contextualized representations.'
+    },
+    paraphrase: {
+        ref: 'The system reaches an accuracy of 95% on the test data.',
+        hyp: 'On the test data the model shows 95-percent correctness.',
+        bleu: 0.35, rouge: 0.50, bert: 0.88,
+        explain: 'Full paraphrase with the same meaning. Classical metrics largely fail; only BERTScore reliably detects the semantic equivalence.'
+    },
+    contradict: {
+        ref: 'The motor reaches 3000 revolutions per minute.',
+        hyp: 'The motor does NOT reach 3000 revolutions per minute.',
+        bleu: 0.92, rouge: 0.94, bert: 0.96,
+        explain: '⚠️ Critical case: the hypothesis contradicts the reference but shares almost all tokens. ALL three metrics are misleadingly high here! This failure mode motivates NLI-based metrics (e.g., BLEURT, COMET).'
+    }
+};
+
+document.querySelectorAll('.variant-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const v = variants[btn.dataset.variant];
+        document.getElementById('ref-text').textContent = v.ref;
+        document.getElementById('hyp-text').textContent = v.hyp;
+        document.getElementById('bleuVal').textContent = v.bleu.toFixed(2);
+        document.getElementById('rougeVal').textContent = v.rouge.toFixed(2);
+        document.getElementById('bertVal').textContent = v.bert.toFixed(2);
+        document.getElementById('variant-explanation').textContent = v.explain;
+    });
+});
+
+// =================================================================
+//   QUIZ
+// =================================================================
+const quizData = [
+    {
+        q: 'Which metric is best suited to detect hallucinations in RAG answers?',
+        opts: ['BLEU', 'Faithfulness', 'MRR', 'NDCG'],
+        correct: 1,
+        feedback: 'Faithfulness measures exactly the fraction of answer claims supported by the retrieved context. Low faithfulness is the direct signature of a hallucination.'
+    },
+    {
+        q: 'A retriever returns 4 relevant documents in the top-5; the corpus contains 12 relevant ones in total. What are Precision@5 and Recall@5?',
+        opts: ['P=0.80; R=0.33', 'P=0.33; R=0.80', 'P=0.40; R=0.12', 'P=0.80; R=0.40'],
+        correct: 0,
+        feedback: 'Precision@5 = 4/5 = 0.80. Recall@5 = 4/12 ≈ 0.333.'
+    },
+    {
+        q: 'Which statement about NDCG is CORRECT?',
+        opts: [
+            'NDCG can only handle binary relevance.',
+            'NDCG discounts later ranks logarithmically.',
+            'NDCG is always higher than MRR.',
+            'NDCG requires no ground truth.'
+        ],
+        correct: 1,
+        feedback: 'The factor $1/\\log_2(i+1)$ in DCG implements position discounting: hits at higher ranks contribute more to the score.'
+    },
+    {
+        q: 'Why can BERTScore detect semantic equivalence better than BLEU?',
+        opts: [
+            'Because BERTScore uses longer n-grams.',
+            'Because BERTScore includes a brevity penalty.',
+            'Because BERTScore uses contextualized embeddings instead of exact token matches.',
+            'Because BERTScore is recall-oriented.'
+        ],
+        correct: 2,
+        feedback: 'BERTScore replaces exact matching with maximum cosine similarity of BERT embeddings. Synonyms and paraphrases are recognized because their vectors lie close together in embedding space.'
+    },
+    {
+        q: 'Which Cohen\'s kappa value indicates "substantial agreement" between two annotators (Landis & Koch, 1977)?',
+        opts: ['0.15', '0.45', '0.75', '0.95'],
+        correct: 2,
+        feedback: 'The range 0.61–0.80 is classified as "substantial agreement". 0.75 falls clearly within this interval.'
+    },
+    {
+        q: 'A RAG system has high faithfulness (0.95) but low context recall (0.40). Where is the problem?',
+        opts: [
+            'The generator hallucinates.',
+            'The retriever delivers incomplete context.',
+            'The answer addresses a different question.',
+            'The embeddings are poorly trained.'
+        ],
+        correct: 1,
+        feedback: 'High faithfulness means: what is generated is supported. Low context recall means: the retrieved context does not cover the gold answer. A textbook diagnosis of a retrieval problem.'
+    }
+];
+
+const quizContainer = document.getElementById('quiz-container');
+const userAnswers = new Array(quizData.length).fill(null);
+
+function renderQuiz() {
+    quizContainer.innerHTML = '';
+    quizData.forEach((item, qi) => {
+        const block = document.createElement('div');
+        block.className = 'quiz-question';
+        const optsHtml = item.opts.map((opt, oi) => {
+            const letter = ['A', 'B', 'C', 'D'][oi];
+            return `<div class="quiz-option" data-q="${qi}" data-o="${oi}">
+                        <span class="opt-marker">${letter}</span>
+                        <span>${opt}</span>
+                    </div>`;
+        }).join('');
+        block.innerHTML = `
+            <div class="q-text"><span class="q-num">${qi + 1}</span><span>${item.q}</span></div>
+            <div class="quiz-options">${optsHtml}</div>
+            <div class="quiz-feedback" id="fb-${qi}"></div>
+        `;
+        quizContainer.appendChild(block);
+    });
+
+    quizContainer.querySelectorAll('.quiz-option').forEach(el => {
+        el.addEventListener('click', () => {
+            const qi = parseInt(el.dataset.q);
+            const oi = parseInt(el.dataset.o);
+            if (userAnswers[qi] !== null) return;
+            userAnswers[qi] = oi;
+
+            const correct = quizData[qi].correct;
+            const optionEls = quizContainer.querySelectorAll(`.quiz-option[data-q="${qi}"]`);
+            optionEls.forEach((opt, idx) => {
+                if (idx === correct) opt.classList.add('correct');
+                else if (idx === oi) opt.classList.add('incorrect');
+                opt.style.cursor = 'default';
+            });
+
+            const fb = document.getElementById('fb-' + qi);
+            const isCorrect = oi === correct;
+            fb.className = 'quiz-feedback show ' + (isCorrect ? 'correct' : 'incorrect');
+            fb.innerHTML = (isCorrect ? '✓ Correct. ' : '✗ Not quite. The correct answer is <strong>' + ['A','B','C','D'][correct] + '</strong>. ') + quizData[qi].feedback;
+            if (window.renderMathInElement) {
+                window.renderMathInElement(fb, {
+                    delimiters:[
+                        {left:'$$',right:'$$',display:true},
+                        {left:'$',right:'$',display:false}
+                    ],
+                    throwOnError:false
+                });
+            }
+
+            if (userAnswers.every(a => a !== null)) {
+                const score = userAnswers.reduce((acc, a, i) => acc + (a === quizData[i].correct ? 1 : 0), 0);
+                document.getElementById('quiz-score').textContent = `${score} / ${quizData.length}`;
+                let msg;
+                const pct = score / quizData.length;
+                if (pct === 1) msg = 'Excellent! You have a solid command of the evaluation metrics.';
+                else if (pct >= 0.7) msg = 'Solid understanding. Recommendation: revisit the chapters covering the questions you missed.';
+                else if (pct >= 0.5) msg = 'Reasonable foundation. Recommendation: re-study Chapters 2 and 3.';
+                else msg = 'Recommendation: work systematically through Chapters 1–4 once more.';
+                document.getElementById('quiz-message').textContent = msg;
+                document.getElementById('quiz-summary').style.display = 'block';
+                document.getElementById('quiz-summary').scrollIntoView({behavior:'smooth', block:'center'});
+            }
+        });
+    });
+}
+renderQuiz();
+
+// =================================================================
+//   CHARTS
+// =================================================================
+window.allCharts = [];
+
+function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function chartTextColor() { return cssVar('--text'); }
+function chartGridColor() { return cssVar('--border'); }
+
+Chart.defaults.font.family = "'IBM Plex Sans', sans-serif";
+Chart.defaults.color = chartTextColor();
+
+// ---- Chart 1: Retrieval Metrics Bar ----
+window.allCharts.push(new Chart(document.getElementById('retrievalMetricsChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: ['Precision@5', 'Recall@5', 'MRR', 'NDCG@5'],
+        datasets: [{
+            label: 'Value',
+            data: [0.60, 0.375, 0.708, 0.871],
+            backgroundColor: ['#1a365d', '#2c5282', '#1f5235', '#8b1a1a'],
+            borderRadius: 6,
+            borderSkipped: false
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            title: { display: true, text: 'Retrieval metrics compared', font: { size: 15, weight: '600' } },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y.toFixed(3)}` } }
+        },
+        scales: {
+            y: { beginAtZero: true, max: 1, grid: { color: () => chartGridColor() }, ticks: { color: () => chartTextColor() } },
+            x: { grid: { display: false }, ticks: { color: () => chartTextColor() } }
+        }
+    }
+}));
+
+// ---- Chart 2: PR Curve ----
+window.allCharts.push(new Chart(document.getElementById('prCurveChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        datasets: [
+            {
+                label: 'BM25 (classic)',
+                data: [{x:0,y:0.65},{x:0.1,y:0.58},{x:0.2,y:0.50},{x:0.3,y:0.44},{x:0.4,y:0.38},{x:0.5,y:0.32},{x:0.6,y:0.26},{x:0.7,y:0.20},{x:0.8,y:0.15},{x:0.9,y:0.10},{x:1.0,y:0.06}],
+                borderColor: '#8b1a1a', backgroundColor: 'rgba(139,26,26,0.1)',
+                fill: false, tension: 0.3, borderWidth: 2.5
+            },
+            {
+                label: 'Dense retriever (DPR)',
+                data: [{x:0,y:0.92},{x:0.1,y:0.88},{x:0.2,y:0.83},{x:0.3,y:0.78},{x:0.4,y:0.72},{x:0.5,y:0.66},{x:0.6,y:0.58},{x:0.7,y:0.50},{x:0.8,y:0.40},{x:0.9,y:0.30},{x:1.0,y:0.18}],
+                borderColor: '#1a365d', backgroundColor: 'rgba(26,54,93,0.1)',
+                fill: false, tension: 0.3, borderWidth: 2.5
+            },
+            {
+                label: 'Hybrid (BM25 + DPR + reranker)',
+                data: [{x:0,y:0.96},{x:0.1,y:0.94},{x:0.2,y:0.91},{x:0.3,y:0.87},{x:0.4,y:0.83},{x:0.5,y:0.78},{x:0.6,y:0.72},{x:0.7,y:0.65},{x:0.8,y:0.55},{x:0.9,y:0.42},{x:1.0,y:0.28}],
+                borderColor: '#1f5235', backgroundColor: 'rgba(31,82,53,0.12)',
+                fill: false, tension: 0.3, borderWidth: 2.5
+            }
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            title: { display: true, text: 'Precision-recall curves of three retrieval strategies', font: { size: 15, weight: '600' } },
+            legend: { position: 'bottom' }
+        },
+        scales: {
+            x: { type: 'linear', min: 0, max: 1, title: { display: true, text: 'Recall' }, grid: { color: () => chartGridColor() }, ticks: { color: () => chartTextColor() } },
+            y: { min: 0, max: 1, title: { display: true, text: 'Precision' }, grid: { color: () => chartGridColor() }, ticks: { color: () => chartTextColor() } }
+        }
+    }
+}));
+
+// ---- Chart 3: Confusion matrix ----
+window.allCharts.push(new Chart(document.getElementById('confusionChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: ['Relevant + retrieved (TP)', 'Irrelevant + retrieved (FP)', 'Relevant + not retrieved (FN)', 'Irrelevant + not retrieved (TN)'],
+        datasets: [{
+            label: 'Document count',
+            data: [42, 18, 8, 932],
+            backgroundColor: ['#1f5235', '#9a6b1c', '#8b1a1a', '#4a5568'],
+            borderRadius: 6
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            title: { display: true, text: 'Confusion matrix distribution (1000 documents, K=60)', font: { size: 15, weight: '600' } }
+        },
+        scales: {
+            x: { type: 'logarithmic', grid: { color: () => chartGridColor() }, ticks: { color: () => chartTextColor() } },
+            y: { grid: { display: false }, ticks: { color: () => chartTextColor(), font: { size: 11 } } }
+        }
+    }
+}));
+
+// ---- Chart 4: RAGAS Radar ----
+window.allCharts.push(new Chart(document.getElementById('ragasRadarChart').getContext('2d'), {
+    type: 'radar',
+    data: {
+        labels: ['Faithfulness', 'Answer relevance', 'Context precision', 'Context recall'],
+        datasets: [
+            {
+                label: 'System A (vanilla RAG)',
+                data: [0.72, 0.65, 0.58, 0.52],
+                backgroundColor: 'rgba(139,26,26,0.18)',
+                borderColor: '#8b1a1a', borderWidth: 2,
+                pointBackgroundColor: '#8b1a1a'
+            },
+            {
+                label: 'System B (hybrid + reranker)',
+                data: [0.91, 0.88, 0.84, 0.79],
+                backgroundColor: 'rgba(26,54,93,0.18)',
+                borderColor: '#1a365d', borderWidth: 2,
+                pointBackgroundColor: '#1a365d'
+            }
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            title: { display: true, text: 'RAGAS profile: vanilla vs. hybrid-reranker system', font: { size: 15, weight: '600' } },
+            legend: { position: 'bottom' }
+        },
+        scales: {
+            r: {
+                beginAtZero: true, max: 1,
+                grid: { color: () => chartGridColor() },
+                angleLines: { color: () => chartGridColor() },
+                pointLabels: { color: () => chartTextColor(), font: { size: 11, weight: '500' } },
+                ticks: { color: () => chartTextColor(), backdropColor: 'transparent' }
+            }
+        }
+    }
+}));
+
+// ---- Chart 5: Metric comparison ----
+window.allCharts.push(new Chart(document.getElementById('metricComparisonChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: ['Exact', 'One word', 'Synonym', 'Paraphrase', 'Contradiction'],
+        datasets: [
+            { label: 'BLEU', data: [1.0, 0.79, 0.30, 0.35, 0.92], backgroundColor: '#1a365d', borderRadius: 4 },
+            { label: 'ROUGE-L', data: [1.0, 0.88, 0.42, 0.50, 0.94], backgroundColor: '#1f5235', borderRadius: 4 },
+            { label: 'BERTScore', data: [1.0, 0.95, 0.91, 0.88, 0.96], backgroundColor: '#8b1a1a', borderRadius: 4 }
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            title: { display: true, text: 'Metrics under increasing text variation', font: { size: 15, weight: '600' } },
+            legend: { position: 'bottom' }
+        },
+        scales: {
+            y: { beginAtZero: true, max: 1, grid: { color: () => chartGridColor() }, ticks: { color: () => chartTextColor() } },
+            x: { grid: { display: false }, ticks: { color: () => chartTextColor() } }
+        }
+    }
+}));
+
+// ---- Chart 6: Bootstrap distribution ----
+function genBootstrap(n=1000, mean=0.708, sd=0.028, seed=42) {
+    let s = seed;
+    const rand = () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
+    function gauss() {
+        let u=0,v=0; while(u===0) u=rand(); while(v===0) v=rand();
+        return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+    }
+    const data = [];
+    for (let i=0;i<n;i++) data.push(mean + sd*gauss());
+    return data;
+}
+const bootstrapData = genBootstrap();
+const nBins = 30;
+const minV = Math.min(...bootstrapData), maxV = Math.max(...bootstrapData);
+const binW = (maxV - minV) / nBins;
+const counts = new Array(nBins).fill(0);
+const labels = [];
+for (let b=0; b<nBins; b++) labels.push((minV + (b+0.5)*binW).toFixed(3));
+bootstrapData.forEach(v => {
+    let idx = Math.min(nBins-1, Math.floor((v-minV)/binW));
+    counts[idx]++;
+});
+const sorted = [...bootstrapData].sort((a,b)=>a-b);
+const lo = sorted[Math.floor(0.025 * sorted.length)];
+const hi = sorted[Math.floor(0.975 * sorted.length)];
+const median = sorted[Math.floor(0.5 * sorted.length)];
+
+const ciPlugin = {
+    id: 'ciLines',
+    afterDatasetsDraw(chart) {
+        const {ctx, chartArea: {top, bottom}, scales: {x}} = chart;
+        ctx.save();
+        const drawLine = (val, color, label) => {
+            const xPos = x.getPixelForValue(val.toFixed(3));
+            ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+            ctx.beginPath(); ctx.moveTo(xPos, top); ctx.lineTo(xPos, bottom); ctx.stroke();
+            ctx.fillStyle = color; ctx.font = '600 11px IBM Plex Sans';
+            ctx.fillText(label, xPos + 4, top + 14);
+        };
+        drawLine(lo, '#8b1a1a', `2.5%: ${lo.toFixed(3)}`);
+        drawLine(hi, '#8b1a1a', `97.5%: ${hi.toFixed(3)}`);
+        drawLine(median, '#1f5235', `Median: ${median.toFixed(3)}`);
+        ctx.restore();
+    }
+};
+
+window.allCharts.push(new Chart(document.getElementById('bootstrapChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Bootstrap frequency',
+            data: counts,
+            backgroundColor: '#2c5282',
+            borderRadius: 1
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            title: { display: true, text: 'Bootstrap distribution of NDCG@10 (1000 resamples)', font: { size: 15, weight: '600' } }
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                ticks: { color: () => chartTextColor(), maxRotation: 0, autoSkip: true, maxTicksLimit: 10 },
+                title: { display: true, text: 'NDCG@10' }
+            },
+            y: {
+                beginAtZero: true,
+                grid: { color: () => chartGridColor() },
+                ticks: { color: () => chartTextColor() },
+                title: { display: true, text: 'Number of resamples' }
+            }
+        }
+    },
+    plugins: [ciPlugin]
+}));
+
+// Theme update for charts
+window._chartThemeUpdater = () => {
+    Chart.defaults.color = chartTextColor();
+    window.allCharts.forEach(c => {
+        try {
+            if (c.options.scales) {
+                Object.values(c.options.scales).forEach(sc => {
+                    if (sc.ticks) sc.ticks.color = chartTextColor();
+                    if (sc.grid && typeof sc.grid.color !== 'function') sc.grid.color = chartGridColor();
+                    if (sc.angleLines) sc.angleLines.color = chartGridColor();
+                    if (sc.pointLabels) sc.pointLabels.color = chartTextColor();
+                });
+            }
+            c.update('none');
+        } catch(e){}
+    });
+};
+themeToggle.addEventListener('click', () => setTimeout(window._chartThemeUpdater, 50));
+setTimeout(window._chartThemeUpdater, 100);
+</script>
+</body>
+</html>

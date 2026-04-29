@@ -20,6 +20,7 @@ A collection of interactive web tools for exploring machine learning algorithms 
 | [GPT-Decoder Simulator](https://abka0002.github.io/Machine-Learning-Explained/GPTDecoderSimulator/) | Complete data flow with mathematical examples |
 | [RAG-System Simulator](https://abka0002.github.io/Machine-Learning-Explained/RAGSystemSimulator/) | Retrieval-Augmented Generation· Step-by-Step |
 | [Low-Rank Adaptation (LoRA) LLMS](https://abka0002.github.io/Machine-Learning-Explained/LowRankAdaptationLLMS/) | LoRA (Low-Rank Adaptation, Hu et al. 2021) is a parameter-efficient fine-tuning method that freezes a pre-trained model's weights and learns a small rank-r update on the side. |
+| [RAG & Fine-Tuned LLM Evaluation Guide](https://abka0002.github.io/Machine-Learning-Explained/RAGFineTunedEvaluation/) | Evaluating Retrieval-Augmented Generation Systems and Fine-Tuned Large Language Models. An introduction with examples, mathematical derivation, and discussion of common evaluation metrics.|
 
 ## About
 
